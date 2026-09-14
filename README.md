@@ -1,7 +1,6 @@
 # Hệ thống Quản lý Vận đơn và Đối soát Tài chính Chặng cuối
 **Last-Mile Waybill Management & Financial Reconciliation System**
 
-> Đồ án tốt nghiệp — Trường Đại học Nguyễn Tất Thành (NTTU)
 
 ---
 
@@ -150,4 +149,3 @@ ADMIN ──────────────────── VAN_DON ─�
 
 ---
 
-*© 2024 — NTTU IT Department — Last-Mile Logistics System*
