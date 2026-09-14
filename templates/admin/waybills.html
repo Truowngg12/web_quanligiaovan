@@ -1,0 +1,207 @@
+{% extends "admin/base.html" %}
+{% block title %}Vận đơn{% endblock %}
+{% block breadcrumb %}Danh sách vận đơn{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('admin_create_waybill') }}" class="btn btn-primary btn-sm">
+  <i class="bi bi-plus-lg me-1"></i>Tạo vận đơn
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="sec-hdr mb-3 anim-fade-up">
+  <div>
+    <h2 class="sec-title mb-0">Quản lý vận đơn</h2>
+    <p class="text-muted mb-0" style="font-size:.79rem;">{{ pagination.total }} vận đơn trong hệ thống</p>
+  </div>
+</div>
+
+<!-- Filter bar (server-side) -->
+<form method="GET" class="filter-bar mb-3">
+  <div class="row g-2 align-items-end">
+    <div class="col-12 col-md-4">
+      <label class="form-label">Tìm kiếm</label>
+      <div class="search-input-wrap">
+        <i class="bi bi-search"></i>
+        <input type="text" name="search" class="form-control"
+               placeholder="Mã VĐ hoặc tên người nhận…" value="{{ search }}">
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <label class="form-label">Trạng thái</label>
+      <select name="status" class="form-select">
+        <option value="">Tất cả</option>
+        {% for s in statuses %}
+        <option value="{{ s }}" {% if s==status_filter %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-3">
+      <label class="form-label">Tài xế</label>
+      <select name="driver" class="form-select">
+        <option value="">Tất cả</option>
+        {% for d in drivers %}
+        <option value="{{ d.MaTaiXe }}" {% if driver_filter|string==d.MaTaiXe|string %}selected{% endif %}>
+          {{ d.TenTaiXe }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12 col-md-2 d-flex gap-2">
+      <button type="submit" class="btn btn-primary flex-grow-1">
+        <i class="bi bi-funnel-fill me-1"></i>Lọc
+      </button>
+      <a href="{{ url_for('admin_waybills') }}" class="btn btn-outline-secondary" title="Xoá bộ lọc">
+        <i class="bi bi-x-lg"></i>
+      </a>
+    </div>
+  </div>
+</form>
+
+{% if waybills %}
+<!-- DataTable -->
+<div class="table-wrap">
+  <div class="table-responsive">
+    <table class="table align-middle" id="waybillTable">
+      <thead>
+        <tr>
+          <th>Mã vận đơn</th>
+          <th>Người nhận</th>
+          <th class="text-end">COD</th>
+          <th class="text-end">Cước phí</th>
+          <th>Trạng thái</th>
+          <th>Tài xế</th>
+          <th>Ngày tạo</th>
+          <th class="text-center" style="width:60px;">
+            <i class="bi bi-gear" style="font-size:.75rem;"></i>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for w in waybills %}
+      {% set parts = w.ThongTinNhan.split(' | ') %}
+      <tr id="row-{{ w.MaVanDon }}">
+        <td>
+          <a href="{{ url_for('admin_waybill_detail', ma_van_don=w.MaVanDon) }}" class="wid text-decoration-none">
+            {{ w.MaVanDon }}
+          </a>
+        </td>
+        <td>
+          <div class="fw-semibold" style="font-size:.85rem;color:#0f172a;">{{ parts[0] if parts|length>0 else '—' }}</div>
+          <div style="font-size:.73rem;color:#64748b;">{{ parts[1] if parts|length>1 else '' }}</div>
+          <div style="font-size:.71rem;color:#94a3b8;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            {{ parts[2] if parts|length>2 else '' }}
+          </div>
+        </td>
+        <td class="text-end">
+          {% if w.TienCOD > 0 %}
+          <span class="fw-bold" style="color:#dc2626;font-size:.84rem;">{{ w.TienCOD|vnd }}</span>
+          {% else %}<span class="text-muted" style="font-size:.8rem;">—</span>{% endif %}
+        </td>
+        <td class="text-end">
+          <span style="font-size:.83rem;color:#475569;">{{ w.CuocPhi|vnd }}</span>
+        </td>
+        <td class="status-cell">
+          {% set s = w.TrangThai %}
+          {% if s=='Chờ điều phối'  %}<span class="sbadge sb-pending"   ><span class="sbadge-dot"></span>{{ s }}</span>
+          {% elif s=='Đang đi giao' %}<span class="sbadge sb-delivering"><span class="sbadge-dot"></span>{{ s }}</span>
+          {% elif s=='Thành công'   %}<span class="sbadge sb-success"   ><span class="sbadge-dot"></span>{{ s }}</span>
+          {% elif s=='Giao thất bại'%}<span class="sbadge sb-failed"    ><span class="sbadge-dot"></span>{{ s }}</span>
+          {% else                   %}<span class="sbadge sb-reconciled"><span class="sbadge-dot"></span>{{ s }}</span>{% endif %}
+        </td>
+        <td class="driver-cell" style="min-width:180px;">
+          {% if w.TrangThai in ['Chờ điều phối','Đang đi giao'] %}
+          <div class="d-flex gap-1 align-items-center">
+            <select class="form-select form-select-sm driver-select" style="font-size:.77rem;min-width:120px;">
+              <option value="">-- Chọn --</option>
+              {% for d in drivers %}
+              <option value="{{ d.MaTaiXe }}" {% if w.MaTaiXe==d.MaTaiXe %}selected{% endif %}>{{ d.TenTaiXe }}</option>
+              {% endfor %}
+            </select>
+            <button class="btn btn-sm btn-primary btn-assign-submit" data-id="{{ w.MaVanDon }}"
+                    title="Xác nhận điều phối" style="padding:.28rem .52rem;">
+              <i class="bi bi-check-lg"></i>
+            </button>
+          </div>
+          {% elif w.driver %}
+          <div class="d-flex align-items-center gap-1">
+            <i class="bi bi-person-fill text-indigo" style="font-size:.8rem;"></i>
+            <span class="fw-semibold" style="font-size:.84rem;">{{ w.driver.TenTaiXe }}</span>
+          </div>
+          <div style="font-size:.7rem;color:#94a3b8;">{{ w.driver.DienThoai }}</div>
+          {% else %}<span class="text-muted" style="font-size:.8rem;">—</span>{% endif %}
+        </td>
+        <td><span style="font-size:.79rem;color:#64748b;white-space:nowrap;">{{ w.NgayTao|dt }}</span></td>
+        <td class="text-center">
+          <a href="{{ url_for('admin_waybill_detail', ma_van_don=w.MaVanDon) }}"
+             class="btn btn-sm btn-indigo-soft" title="Chi tiết" style="padding:.3rem .55rem;">
+            <i class="bi bi-eye"></i>
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Server-side pagination -->
+{% if pagination.pages > 1 %}
+<nav class="mt-3 d-flex justify-content-between align-items-center">
+  <span class="text-muted" style="font-size:.78rem;">
+    Trang {{ pagination.page }}/{{ pagination.pages }} ({{ pagination.total }} bản ghi)
+  </span>
+  <ul class="pagination mb-0">
+    <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+      <a class="page-link" href="{{ url_for('admin_waybills',page=pagination.prev_num,status=status_filter,driver=driver_filter,search=search) }}">‹</a>
+    </li>
+    {% for p in pagination.iter_pages(left_edge=1,right_edge=1,left_current=2,right_current=2) %}
+      {% if p %}
+      <li class="page-item {% if p==pagination.page %}active{% endif %}">
+        <a class="page-link" href="{{ url_for('admin_waybills',page=p,status=status_filter,driver=driver_filter,search=search) }}">{{ p }}</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">…</span></li>
+      {% endif %}
+    {% endfor %}
+    <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+      <a class="page-link" href="{{ url_for('admin_waybills',page=pagination.next_num,status=status_filter,driver=driver_filter,search=search) }}">›</a>
+    </li>
+  </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="card anim-fade-up">
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="bi bi-inbox"></i>
+      <p>Không tìm thấy vận đơn nào.</p>
+      {% if status_filter or driver_filter or search %}
+      <a href="{{ url_for('admin_waybills') }}" class="btn btn-outline-secondary btn-sm mt-2">
+        <i class="bi bi-x-circle me-1"></i>Xoá bộ lọc
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Client-side instant search on current page (complements server pagination)
+document.addEventListener('DOMContentLoaded', function () {
+  const searchInput = document.querySelector('input[name="search"]');
+  const tbody = document.querySelector('#waybillTable tbody');
+  if (!searchInput || !tbody) return;
+
+  searchInput.addEventListener('input', function () {
+    const q = this.value.toLowerCase();
+    tbody.querySelectorAll('tr').forEach(function (row) {
+      row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  });
+});
+</script>
+{% endblock %}

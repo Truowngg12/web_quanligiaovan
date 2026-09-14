@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>{% block title %}Dashboard{% endblock %} — VanDon System</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <!-- DataTables -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<!-- Hidden flash zone → JS converts to toasts -->
+<div class="flash-zone" style="display:none;">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+    <div class="alert alert-{{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+</div>
+
+<div class="wrapper">
+  <!-- Mobile overlay -->
+  <div id="sidebarOverlay"></div>
+
+  <!-- ══════════════════════ SIDEBAR ══════════════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-brand" href="{{ url_for('admin_dashboard') }}">
+      <div class="sidebar-brand-icon"><i class="bi bi-box-seam"></i></div>
+      <span>VanDon System</span>
+    </a>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Tổng quan</div>
+      <a href="{{ url_for('admin_dashboard') }}"
+         class="nav-link {% if request.endpoint=='admin_dashboard' %}active{% endif %}">
+        <i class="bi bi-speedometer2"></i><span>Dashboard</span>
+      </a>
+
+      <div class="nav-section-label">Vận đơn</div>
+      <a href="{{ url_for('admin_waybills') }}"
+         class="nav-link {% if request.endpoint in ('admin_waybills','admin_waybill_detail') %}active{% endif %}">
+        <i class="bi bi-file-earmark-text"></i><span>Danh sách</span>
+      </a>
+      <a href="{{ url_for('admin_create_waybill') }}"
+         class="nav-link {% if request.endpoint=='admin_create_waybill' %}active{% endif %}">
+        <i class="bi bi-plus-circle"></i><span>Tạo mới</span>
+      </a>
+
+      <div class="nav-section-label">Nhân sự</div>
+      <a href="{{ url_for('admin_drivers') }}"
+         class="nav-link {% if request.endpoint in ('admin_drivers','admin_create_driver','admin_edit_driver') %}active{% endif %}">
+        <i class="bi bi-people"></i><span>Tài xế</span>
+      </a>
+
+      <div class="nav-section-label">Tài chính</div>
+      <a href="{{ url_for('admin_reconciliation') }}"
+         class="nav-link {% if request.endpoint in ('admin_reconciliation',) %}active{% endif %}">
+        <i class="bi bi-cash-coin"></i><span>Đối soát COD</span>
+      </a>
+
+      <div class="nav-section-label">Hệ thống</div>
+      <a href="{{ url_for('admin_settings') }}"
+         class="nav-link {% if request.endpoint == 'admin_settings' %}active{% endif %}">
+        <i class="bi bi-sliders"></i><span>Cài đặt</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="user-avatar"><i class="bi bi-person-fill" style="font-size:.82rem;"></i></div>
+        <div>
+          <div class="user-name">{{ session.user_name }}</div>
+          <div class="user-role">Quản trị viên</div>
+        </div>
+      </div>
+      <a href="{{ url_for('logout') }}" class="btn-logout">
+        <i class="bi bi-box-arrow-right"></i> Đăng xuất
+      </a>
+    </div>
+  </aside>
+
+  <!-- ══════════════════════ MAIN ══════════════════════════ -->
+  <div class="main-content">
+    <header class="topbar">
+      <button id="sidebarToggle" class="btn btn-sm btn-outline-secondary topbar-toggle"
+              style="border-radius:8px;padding:.32rem .58rem;display:none;">
+        <i class="bi bi-list fs-5"></i>
+      </button>
+
+      <div class="breadcrumb-trail">
+        <i class="bi bi-house" style="font-size:.8rem;"></i>
+        <span class="sep">/</span>
+        <span class="current">{% block breadcrumb %}{% endblock %}</span>
+      </div>
+
+      <div class="ms-auto d-flex align-items-center gap-2">
+        {% block topbar_actions %}{% endblock %}
+      </div>
+    </header>
+
+    <main class="content-area">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div><!-- /wrapper -->
+
+<!-- Confirm Modal (injected by JS) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<!-- jQuery + DataTables -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

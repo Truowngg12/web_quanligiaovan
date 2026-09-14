@@ -1,0 +1,127 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Tạo vận đơn{% endblock %}
+{% block breadcrumb %}Tạo vận đơn mới{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-xl-8">
+
+    <div class="mb-3">
+      <a href="{{ url_for('admin_waybills') }}" class="back-link">
+        <i class="bi bi-arrow-left me-1"></i>Quay lại danh sách
+      </a>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-header-title">
+          <i class="bi bi-plus-circle text-indigo"></i> Tạo vận đơn mới
+        </div>
+      </div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('admin_create_waybill') }}" novalidate>
+
+          <!-- ─── Thông tin người nhận ──────────────────── -->
+          <div class="p-3 mb-4 rounded-3" style="background:#f8fafc;border:1px solid #e2e8f0;">
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <div class="stat-icon icon-indigo" style="width:32px;height:32px;font-size:.85rem;border-radius:8px;">
+                <i class="bi bi-person"></i>
+              </div>
+              <span class="fw-bold" style="font-size:.9rem;color:#0f172a;">Thông tin người nhận</span>
+            </div>
+
+            <div class="row g-3">
+              <div class="col-12 col-md-5">
+                <label class="form-label">Họ tên người nhận <span class="text-danger">*</span></label>
+                <input type="text" name="ten_nhan" class="form-control"
+                       placeholder="Nguyễn Văn A" required maxlength="100">
+              </div>
+              <div class="col-12 col-md-4">
+                <label class="form-label">Số điện thoại <span class="text-danger">*</span></label>
+                <input type="text" name="sdt_nhan" class="form-control"
+                       placeholder="09xx xxx xxx" required maxlength="15">
+              </div>
+              <div class="col-12 col-md-3">
+                <!-- spacer -->
+              </div>
+              <div class="col-12">
+                <label class="form-label">Địa chỉ giao hàng <span class="text-danger">*</span></label>
+                <input type="text" name="dia_chi" class="form-control"
+                       placeholder="123 Đường ABC, Phường XYZ, Quận 1, TP.HCM" required maxlength="255">
+              </div>
+            </div>
+          </div>
+
+          <!-- ─── Thông tin tài chính ───────────────────── -->
+          <div class="p-3 mb-4 rounded-3" style="background:#f8fafc;border:1px solid #e2e8f0;">
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <div class="stat-icon icon-amber" style="width:32px;height:32px;font-size:.85rem;border-radius:8px;">
+                <i class="bi bi-cash-coin"></i>
+              </div>
+              <span class="fw-bold" style="font-size:.9rem;color:#0f172a;">Thông tin tài chính</span>
+            </div>
+
+            <div class="row g-3">
+              <div class="col-12 col-md-5">
+                <label class="form-label">Tiền COD (₫)</label>
+                <div class="input-icon-wrap">
+                  <i class="bi bi-currency-exchange"></i>
+                  <input type="number" name="tien_cod" id="tienCOD"
+                         class="form-control" value="0" min="0" step="1000"
+                         placeholder="0">
+                </div>
+                <div class="form-text">Để 0 nếu không thu hộ tiền mặt.</div>
+              </div>
+
+              <div class="col-12 col-md-4">
+                <label class="form-label">Cước phí vận chuyển</label>
+                <div class="p-3 rounded-3 d-flex align-items-center gap-2"
+                     style="background:#eef2ff;border:1px solid #c7d2fe;">
+                  <i class="bi bi-calculator text-indigo"></i>
+                  <div>
+                    <div id="feePreview" class="fw-bold text-indigo" style="font-size:1.05rem;">20.000 ₫</div>
+                    <div style="font-size:.68rem;color:#6366f1;">= 20.000 + 1% × COD</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-12 col-md-3 d-flex align-items-end">
+                <div class="alert alert-info d-flex align-items-start gap-2 py-2 px-3 mb-0 w-100"
+                     style="font-size:.74rem;border-radius:9px;">
+                  <i class="bi bi-info-circle-fill flex-shrink-0 mt-1"></i>
+                  <span>Cước phí được tính tự động và lưu vào hệ thống.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ─── Actions ──────────────────────────────── -->
+          <div class="d-flex gap-2 justify-content-end">
+            <a href="{{ url_for('admin_waybills') }}" class="btn btn-outline-secondary">
+              <i class="bi bi-x-lg me-1"></i>Huỷ
+            </a>
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-plus-circle-fill me-1"></i>Tạo vận đơn
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+
+    <!-- Info card -->
+    <div class="card mt-3" style="border-color:#c7d2fe;background:#eef2ff;">
+      <div class="card-body-sm p-3 d-flex gap-3 align-items-start">
+        <i class="bi bi-lightbulb-fill text-indigo mt-1"></i>
+        <div style="font-size:.8rem;color:#3730a3;">
+          <strong>Quy trình:</strong> Sau khi tạo, vận đơn sẽ ở trạng thái
+          <span class="sbadge sb-pending" style="vertical-align:middle;"><span class="sbadge-dot"></span>Chờ điều phối</span>.
+          Bạn cần điều phối Tài xế trong trang <em>Danh sách vận đơn</em> để bắt đầu giao hàng.
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

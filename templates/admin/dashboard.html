@@ -1,0 +1,280 @@
+{% extends "admin/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block breadcrumb %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Page header -->
+<div class="sec-hdr mb-4">
+  <div>
+    <h2 class="sec-title mb-0">Dashboard</h2>
+    <p class="text-muted mb-0" style="font-size:.79rem;">
+      Xin chào, <strong>{{ session.user_name }}</strong> — Cập nhật thời gian thực
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('track_waybill') }}" class="btn btn-outline-secondary btn-sm" target="_blank">
+      <i class="bi bi-search me-1"></i>Tra cứu công khai
+    </a>
+    <a href="{{ url_for('admin_create_waybill') }}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg me-1"></i>Tạo vận đơn
+    </a>
+  </div>
+</div>
+
+<!-- ─── Sufee-style Gradient Stat Cards ─── -->
+<div class="row g-3 mb-4">
+
+  <!-- Total Orders — Indigo -->
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card-gradient grad-indigo">
+      <div class="card-body">
+        <div class="d-flex align-items-start justify-content-between">
+          <div>
+            <div class="stat-value-white">{{ total_orders }}</div>
+            <div class="stat-label-white">Tổng vận đơn</div>
+            <div class="stat-delta-white"><i class="bi bi-box-seam me-1"></i>Tất cả</div>
+          </div>
+          <div class="stat-icon-white"><i class="bi bi-box-seam"></i></div>
+        </div>
+        <div class="sparkline">
+          <div class="spark-bar"></div><div class="spark-bar"></div>
+          <div class="spark-bar"></div><div class="spark-bar"></div>
+          <div class="spark-bar"></div><div class="spark-bar"></div>
+          <div class="spark-bar"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Successful — Green -->
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card-gradient grad-green">
+      <div class="card-body">
+        <div class="d-flex align-items-start justify-content-between">
+          <div>
+            <div class="stat-value-white">{{ total_success }}</div>
+            <div class="stat-label-white">Giao thành công</div>
+            {% if total_orders > 0 %}
+            <div class="stat-delta-white">
+              <i class="bi bi-arrow-up-short"></i>{{ ((total_success/total_orders)*100)|int }}%
+            </div>
+            {% endif %}
+          </div>
+          <div class="stat-icon-white"><i class="bi bi-check-circle-fill"></i></div>
+        </div>
+        <div class="sparkline">
+          <div class="spark-bar"></div><div class="spark-bar"></div>
+          <div class="spark-bar"></div><div class="spark-bar"></div>
+          <div class="spark-bar"></div><div class="spark-bar"></div>
+          <div class="spark-bar"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pending — Amber -->
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card-gradient grad-amber">
+      <div class="card-body">
+        <div class="d-flex align-items-start justify-content-between">
+          <div>
+            <div class="stat-value-white">{{ pending_dispatch }}</div>
+            <div class="stat-label-white">Chờ điều phối</div>
+            {% if delivering > 0 %}
+            <div class="stat-delta-white">
+              <i class="bi bi-truck me-1"></i>{{ delivering }} đang giao
+            </div>
+            {% endif %}
+          </div>
+          <div class="stat-icon-white"><i class="bi bi-clock-history"></i></div>
+        </div>
+        <div class="sparkline">
+          <div class="spark-bar"></div><div class="spark-bar"></div>
+          <div class="spark-bar"></div><div class="spark-bar"></div>
+          <div class="spark-bar"></div><div class="spark-bar"></div>
+          <div class="spark-bar"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COD Holding — Coral/Red -->
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card-gradient grad-coral">
+      <div class="card-body">
+        <div class="d-flex align-items-start justify-content-between">
+          <div>
+            <div class="stat-value-white" style="font-size:1.3rem;">{{ total_cod_holding|vnd }}</div>
+            <div class="stat-label-white">COD đội xe đang giữ</div>
+            <div class="stat-delta-white"><i class="bi bi-wallet2 me-1"></i>Chưa quyết toán</div>
+          </div>
+          <div class="stat-icon-white"><i class="bi bi-wallet2"></i></div>
+        </div>
+        <div class="sparkline">
+          <div class="spark-bar"></div><div class="spark-bar"></div>
+          <div class="spark-bar"></div><div class="spark-bar"></div>
+          <div class="spark-bar"></div><div class="spark-bar"></div>
+          <div class="spark-bar"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ─── KPI second row ─── -->
+<div class="row g-3 mb-4">
+
+  <!-- Success rate ring -->
+  <div class="col-12 col-md-5">
+    <div class="card h-100" style="border-top:3px solid #4f46e5;">
+      <div class="card-body d-flex align-items-center gap-4">
+        <!-- Ring -->
+        <div style="flex-shrink:0;position:relative;width:90px;height:90px;">
+          {% set pct = ((total_success/total_orders)*100)|int if total_orders > 0 else 0 %}
+          <svg viewBox="0 0 36 36" width="90" height="90" style="transform:rotate(-90deg);">
+            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f1f5f9" stroke-width="3.5"/>
+            <circle cx="18" cy="18" r="15.9" fill="none"
+                    stroke="{{ '#16a34a' if pct>=70 else ('#f59e0b' if pct>=40 else '#dc2626') }}"
+                    stroke-width="3.5"
+                    stroke-dasharray="{{ pct }} {{ 100-pct }}"
+                    stroke-linecap="round"
+                    style="transition:stroke-dasharray 1.2s ease;"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:1.1rem;font-weight:900;color:#0f172a;">{{ pct }}%</span>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:.73rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.3rem;">
+            Tỉ lệ thành công
+          </div>
+          <div style="font-size:1.5rem;font-weight:800;color:#0f172a;line-height:1;">{{ total_success }}</div>
+          <div style="font-size:.8rem;color:#64748b;">/ {{ total_orders }} vận đơn</div>
+          <div style="margin-top:.5rem;display:flex;gap:.4rem;flex-wrap:wrap;">
+            <span style="font-size:.7rem;background:#f0fdf4;color:#16a34a;padding:.15rem .5rem;border-radius:10px;font-weight:700;">
+              ✓ {{ total_success }} OK
+            </span>
+            <span style="font-size:.7rem;background:#fef2f2;color:#dc2626;padding:.15rem .5rem;border-radius:10px;font-weight:700;">
+              ✗ {{ failed }} Lỗi
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mini stat grid -->
+  <div class="col-12 col-md-7">
+    <div class="row g-3 h-100">
+      <div class="col-6">
+        <div class="card h-100" style="border-top:3px solid #0891b2;">
+          <div class="card-body d-flex align-items-center gap-3">
+            <div class="stat-icon icon-sky" style="width:44px;height:44px;font-size:1rem;border-radius:10px;flex-shrink:0;">
+              <i class="bi bi-truck"></i>
+            </div>
+            <div>
+              <div style="font-size:1.45rem;font-weight:800;color:#0f172a;">{{ delivering }}</div>
+              <div style="font-size:.73rem;color:#64748b;font-weight:500;">Đang giao</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6">
+        <div class="card h-100" style="border-top:3px solid #dc2626;">
+          <div class="card-body d-flex align-items-center gap-3">
+            <div class="stat-icon icon-red" style="width:44px;height:44px;font-size:1rem;border-radius:10px;flex-shrink:0;">
+              <i class="bi bi-x-circle"></i>
+            </div>
+            <div>
+              <div style="font-size:1.45rem;font-weight:800;color:#0f172a;">{{ failed }}</div>
+              <div style="font-size:.73rem;color:#64748b;font-weight:500;">Thất bại</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Track & Trace link card -->
+      <div class="col-12">
+        <a href="{{ url_for('track_waybill') }}" target="_blank"
+           class="card h-100 text-decoration-none"
+           style="border:2px dashed #c7d2fe;background:#fafaff;transition:all .18s;">
+          <div class="card-body d-flex align-items-center gap-3 py-2">
+            <div class="stat-icon icon-indigo" style="width:40px;height:40px;font-size:.95rem;border-radius:10px;flex-shrink:0;">
+              <i class="bi bi-search"></i>
+            </div>
+            <div>
+              <div style="font-size:.85rem;font-weight:700;color:#4f46e5;">Trang tra cứu công khai</div>
+              <div style="font-size:.72rem;color:#94a3b8;">Khách hàng có thể tra cứu mà không cần đăng nhập</div>
+            </div>
+            <i class="bi bi-arrow-right ms-auto text-indigo"></i>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Chart + Recent orders ─── -->
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header">
+        <div class="card-header-title">
+          <i class="bi bi-graph-up-arrow text-indigo"></i> Xu hướng giao vận (7 ngày)
+        </div>
+        <div class="d-flex gap-2" style="font-size:.72rem;color:#94a3b8;">
+          <span><i class="bi bi-circle-fill" style="color:#16a34a;font-size:.5rem;"></i> Thành công</span>
+          <span><i class="bi bi-circle-fill" style="color:#dc2626;font-size:.5rem;"></i> Thất bại</span>
+        </div>
+      </div>
+      <div class="card-body" style="height:260px;position:relative;">
+        <canvas id="orderChart"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header">
+        <div class="card-header-title">
+          <i class="bi bi-clock-history text-indigo"></i> Vận đơn gần đây
+        </div>
+        <a href="{{ url_for('admin_waybills') }}" class="btn btn-indigo-soft btn-sm" style="font-size:.74rem;">
+          Xem tất cả <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+      </div>
+      <div class="card-body p-0" style="overflow-y:auto;max-height:290px;">
+        {% if recent_orders %}
+        <table class="table mb-0 table-accent">
+          <tbody>
+            {% for w in recent_orders %}
+            <tr style="cursor:pointer;" onclick="location.href='{{ url_for('admin_waybill_detail', ma_van_don=w.MaVanDon) }}'">
+              <td style="padding:.65rem 1rem;">
+                <div class="wid d-inline-block">{{ w.MaVanDon }}</div>
+                <div style="font-size:.74rem;color:#64748b;margin-top:.18rem;">
+                  {{ w.ThongTinNhan.split(' | ')[0] }}
+                </div>
+              </td>
+              <td style="padding:.65rem .5rem;text-align:right;vertical-align:middle;">
+                {% set s = w.TrangThai %}
+                {% if s=='Chờ điều phối'  %}<span class="sbadge sb-pending"   ><span class="sbadge-dot"></span>Chờ ĐP</span>
+                {% elif s=='Đang đi giao' %}<span class="sbadge sb-delivering"><span class="sbadge-dot"></span>Giao</span>
+                {% elif s=='Thành công'   %}<span class="sbadge sb-success"   ><span class="sbadge-dot"></span>OK</span>
+                {% elif s=='Giao thất bại'%}<span class="sbadge sb-failed"    ><span class="sbadge-dot"></span>Lỗi</span>
+                {% else                   %}<span class="sbadge sb-reconciled"><span class="sbadge-dot"></span>ĐS</span>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state"><i class="bi bi-inbox"></i><p>Chưa có vận đơn.</p></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>initOrderChart({{ chart_labels|tojson }},{{ chart_success|tojson }},{{ chart_failed|tojson }});</script>
+{% endblock %}

@@ -1,0 +1,383 @@
+{% extends "driver/base.html" %}
+
+{% block title %}{{ van_don.MaVanDon }}{% endblock %}
+
+{% block nav_left %}
+<a href="{{ url_for('driver_tasks') }}" style="color:#c7d2fe;text-decoration:none;display:flex;align-items:center;gap:.5rem;">
+  <i class="bi bi-arrow-left"></i>
+  <span style="font-weight:700;font-size:.95rem;">{{ van_don.MaVanDon }}</span>
+</a>
+{% endblock %}
+
+{% block nav_right %}
+{% set s = van_don.TrangThai %}
+{% if s == 'Đang đi giao' %}
+<span class="sbadge sb-delivering" style="font-size:.68rem;"><span class="sbadge-dot"></span>Đang giao</span>
+{% elif s == 'Thành công' %}
+<span class="sbadge sb-success" style="font-size:.68rem;"><span class="sbadge-dot"></span>Thành công</span>
+{% elif s == 'Giao thất bại' %}
+<span class="sbadge sb-failed" style="font-size:.68rem;"><span class="sbadge-dot"></span>Thất bại</span>
+{% elif s == 'Đã đối soát' %}
+<span class="sbadge sb-reconciled" style="font-size:.68rem;"><span class="sbadge-dot"></span>Đối soát</span>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+
+<!-- ─── Recipient info card ──────────────────────────────── -->
+<div class="drv-detail-card">
+  <div class="drv-detail-header">
+    <i class="bi bi-person-fill me-1"></i> Thông tin người nhận
+  </div>
+  <div class="drv-detail-body">
+    <div class="info-row">
+      <span class="info-lbl">Họ tên</span>
+      <span class="info-val">{{ parts[0] if parts|length > 0 else '—' }}</span>
+    </div>
+    {% if parts|length > 1 %}
+    <div class="info-row">
+      <span class="info-lbl">SĐT</span>
+      <a href="tel:{{ parts[1] }}" class="info-val text-decoration-none"
+         style="color:var(--primary);">
+        <i class="bi bi-telephone-fill me-1" style="font-size:.8rem;"></i>{{ parts[1] }}
+      </a>
+    </div>
+    {% endif %}
+    {% if parts|length > 2 %}
+    <div class="info-row">
+      <span class="info-lbl">Địa chỉ</span>
+      <span class="info-val">{{ parts[2] }}</span>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ─── Financial card ──────────────────────────────────── -->
+<div class="drv-detail-card">
+  <div class="drv-detail-header">
+    <i class="bi bi-cash-coin me-1"></i> Thông tin tài chính
+  </div>
+  <div class="drv-detail-body">
+    <div class="row g-2">
+      <div class="col-6">
+        <div class="p-3 rounded-3 text-center"
+             style="background:#fef2f2;border:1px solid #fecaca;">
+          <div style="font-size:.65rem;color:#7f1d1d;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">
+            Thu hộ (COD)
+          </div>
+          <div style="font-size:1.25rem;font-weight:800;color:#dc2626;margin-top:.2rem;">
+            {{ van_don.TienCOD|vnd }}
+          </div>
+        </div>
+      </div>
+      <div class="col-6">
+        <div class="p-3 rounded-3 text-center"
+             style="background:#f0fdf4;border:1px solid #bbf7d0;">
+          <div style="font-size:.65rem;color:#14532d;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">
+            Cước phí
+          </div>
+          <div style="font-size:1.25rem;font-weight:800;color:#16a34a;margin-top:.2rem;">
+            {{ van_don.CuocPhi|vnd }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if van_don.TienCOD > 0 %}
+    <div class="mt-3 p-2 rounded-3 d-flex gap-2 align-items-start"
+         style="background:#fffbeb;border:1px solid #fde68a;">
+      <i class="bi bi-exclamation-circle-fill" style="color:#d97706;flex-shrink:0;margin-top:.1rem;"></i>
+      <span style="font-size:.78rem;color:#92400e;font-weight:500;">
+        Thu <strong>{{ van_don.TienCOD|vnd }}</strong> tiền mặt từ khách trước khi xác nhận thành công.
+      </span>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ─── Action buttons (only if still delivering) ──────── -->
+{% if van_don.TrangThai == 'Đang đi giao' %}
+
+<!-- Main CTA buttons -->
+<div class="drv-actions" id="mainActions">
+  <button id="btnOk" type="button" class="btn-deliver-ok" style="margin-bottom:.625rem;">
+    <i class="bi bi-check-circle-fill" style="font-size:1.2rem;"></i>
+    Giao thành công
+  </button>
+  <button id="btnFail" type="button" class="btn-deliver-fail">
+    <i class="bi bi-x-circle-fill" style="font-size:1.2rem;"></i>
+    Báo giao thất bại
+  </button>
+</div>
+
+<!-- ── Success panel with photo upload (hidden by default) ──── -->
+<div id="successPanel" style="display:none;margin:0 1rem 1rem;">
+  <form id="formSuccess" method="POST" enctype="multipart/form-data"
+        action="{{ url_for('driver_update_status', ma_van_don=van_don.MaVanDon) }}">
+    <input type="hidden" name="action" value="success">
+
+    <div class="p-3 rounded-3" style="background:#f0fdf4;border:1px solid #86efac;">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <i class="bi bi-camera-fill" style="color:#16a34a;font-size:1.1rem;"></i>
+        <span style="font-size:.9rem;font-weight:700;color:#15803d;">Ảnh minh chứng giao hàng</span>
+        <span style="font-size:.68rem;background:#dcfce7;color:#166534;padding:.08rem .5rem;
+                     border-radius:10px;font-weight:700;margin-left:auto;">Tuỳ chọn</span>
+      </div>
+
+      <!-- Photo preview (shown after picking) -->
+      <div id="photoPreviewWrap" style="display:none;margin-bottom:.875rem;">
+        <img id="photoPreview" src="" alt="Preview"
+             style="width:100%;max-height:220px;object-fit:cover;
+                    border-radius:12px;border:3px solid #86efac;">
+        <button type="button" id="clearPhoto"
+                style="width:100%;margin-top:.45rem;padding:.35rem;border-radius:8px;
+                       background:none;border:1px solid #fca5a5;color:#dc2626;
+                       font-size:.78rem;font-weight:600;cursor:pointer;">
+          <i class="bi bi-trash3 me-1"></i>Xoá ảnh
+        </button>
+      </div>
+
+      <!-- File input dropzone -->
+      <label id="photoDropzone" style="display:block;cursor:pointer;"
+             title="Chụp hoặc chọn ảnh từ thư viện">
+        <div style="border:2px dashed #4ade80;border-radius:12px;
+                    background:rgba(240,253,244,.6);padding:1.25rem .75rem;
+                    display:flex;align-items:center;justify-content:center;gap:.875rem;
+                    transition:all .2s;" id="dropzoneInner">
+          <div style="width:48px;height:48px;border-radius:50%;
+                      background:linear-gradient(135deg,#15803d,#16a34a);
+                      display:flex;align-items:center;justify-content:center;flex-shrink:0;
+                      box-shadow:0 4px 12px rgba(22,163,74,.35);">
+            <i class="bi bi-camera-fill" style="color:#fff;font-size:1.25rem;"></i>
+          </div>
+          <div>
+            <div style="font-size:.9rem;font-weight:700;color:#15803d;">Chụp / Chọn ảnh</div>
+            <div style="font-size:.72rem;color:#4ade80;">JPG, PNG, WEBP — tối đa 10 MB</div>
+          </div>
+        </div>
+        <input type="file" name="hinh_anh_minh_chung" id="photoInput"
+               accept="image/*" capture="environment"
+               style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;">
+      </label>
+
+      <!-- Action buttons -->
+      <div class="d-flex gap-2 mt-3">
+        <button type="button" id="cancelSuccess"
+                class="btn btn-outline-secondary flex-grow-1" style="border-radius:9px;">
+          <i class="bi bi-arrow-left me-1"></i>Quay lại
+        </button>
+        <button type="submit" id="submitSuccess"
+                style="flex:1.8;padding:.75rem;border:none;border-radius:9px;
+                       background:linear-gradient(135deg,#15803d,#16a34a);
+                       color:#fff;font-weight:700;font-size:.92rem;cursor:pointer;
+                       box-shadow:0 4px 14px rgba(22,163,74,.38);transition:all .18s;">
+          <i class="bi bi-check-circle-fill me-1"></i>Xác nhận giao thành công
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- ── Fail reason box (hidden by default) ──────────────────── -->
+<div class="fail-reason-box" id="failReasonBox">
+  <form method="POST" action="{{ url_for('driver_update_status', ma_van_don=van_don.MaVanDon) }}">
+    <input type="hidden" name="action" value="fail">
+    <div class="d-flex align-items-center gap-2 mb-2">
+      <i class="bi bi-exclamation-triangle-fill" style="color:#dc2626;"></i>
+      <span style="font-size:.88rem;font-weight:700;color:#dc2626;">Xác nhận giao thất bại</span>
+    </div>
+    <label class="form-label" style="font-size:.8rem;">
+      Lý do thất bại <span class="text-danger">*</span>
+    </label>
+    <textarea name="ly_do" class="form-control" rows="3"
+              placeholder="VD: Khách không có mặt, số điện thoại không liên lạc được…"
+              required maxlength="500"></textarea>
+    <div class="d-flex gap-2 mt-3">
+      <button type="button" id="cancelFail"
+              class="btn btn-outline-secondary flex-grow-1" style="border-radius:9px;">
+        <i class="bi bi-x-lg me-1"></i>Huỷ
+      </button>
+      <button type="submit" class="btn-submit-fail flex-grow-1">
+        <i class="bi bi-send-fill me-1"></i>Xác nhận thất bại
+      </button>
+    </div>
+  </form>
+</div>
+
+{% else %}
+<!-- Already finalized -->
+<div style="margin:0 1rem 1rem;">
+  <div class="p-3 rounded-3 d-flex gap-2 align-items-center"
+       style="background:#f8fafc;border:1px solid #e2e8f0;">
+    <i class="bi bi-lock-fill" style="color:#94a3b8;flex-shrink:0;"></i>
+    <span style="font-size:.82rem;color:#64748b;">
+      Vận đơn này đã được xử lý và không thể cập nhật lại.
+    </span>
+  </div>
+</div>
+
+<!-- Show uploaded proof if exists -->
+{% if van_don.HinhAnhMinhChung %}
+<div class="drv-detail-card" style="margin:0 0 1rem;">
+  <div class="drv-detail-header" style="background:linear-gradient(135deg,#15803d,#16a34a);">
+    <i class="bi bi-camera-fill me-1"></i> Ảnh minh chứng giao hàng
+  </div>
+  <div style="padding:.875rem;">
+    <img src="{{ url_for('serve_proof', filename=van_don.HinhAnhMinhChung) }}"
+         alt="Ảnh minh chứng"
+         style="width:100%;border-radius:10px;cursor:zoom-in;max-height:280px;object-fit:cover;"
+         onclick="this.style.maxHeight=this.style.maxHeight==='none'?'280px':'none';">
+    <p style="font-size:.72rem;color:#94a3b8;margin:.5rem 0 0;text-align:center;">
+      <i class="bi bi-info-circle me-1"></i>Nhấn vào ảnh để phóng to / thu nhỏ
+    </p>
+  </div>
+</div>
+{% endif %}
+{% endif %}
+
+<!-- ─── Log timeline ─────────────────────────────────────── -->
+<div class="drv-detail-card" style="margin-bottom:2rem;">
+  <div class="drv-detail-header">
+    <i class="bi bi-clock-history me-1"></i> Lịch sử vận đơn
+  </div>
+  <div style="padding:1rem 1.1rem;">
+    {% if logs %}
+    <ul class="timeline">
+      {% for log in logs %}
+      {% set dot_class = {
+          'Chờ điều phối': 'dot-pending',
+          'Đang đi giao':  'dot-delivering',
+          'Thành công':    'dot-success',
+          'Giao thất bại': 'dot-failed',
+          'Đã đối soát':   'dot-reconciled'
+        }.get(log.TrangThaiMoi, '') %}
+      <li class="tl-item">
+        <div class="tl-dot {{ dot_class }}"></div>
+        <span class="tl-time">{{ log.ThoiGian|dt }}</span>
+        <div class="tl-label">
+          {% if log.TrangThaiCu %}
+          <span style="color:#94a3b8;font-weight:400;">{{ log.TrangThaiCu }}</span>
+          <i class="bi bi-arrow-right mx-1" style="font-size:.65rem;color:#94a3b8;"></i>
+          {% endif %}
+          <strong>{{ log.TrangThaiMoi }}</strong>
+        </div>
+        {% if log.GhiChu %}
+        <div class="tl-note">{{ log.GhiChu }}</div>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p style="text-align:center;color:#94a3b8;font-size:.8rem;margin:0;padding:1rem 0;">
+      Không có lịch sử.
+    </p>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+/* ── Driver update page: photo upload + panel toggle ─────── */
+(function () {
+  var mainActions   = document.getElementById('mainActions');
+  var successPanel  = document.getElementById('successPanel');
+  var failReasonBox = document.getElementById('failReasonBox');
+  var btnOk         = document.getElementById('btnOk');
+  var btnFail       = document.getElementById('btnFail');
+  var cancelSuccess = document.getElementById('cancelSuccess');
+  var cancelFail    = document.getElementById('cancelFail');
+  var photoInput    = document.getElementById('photoInput');
+  var photoPreview  = document.getElementById('photoPreview');
+  var photoWrap     = document.getElementById('photoPreviewWrap');
+  var photoDropzone = document.getElementById('dropzoneInner');
+  var clearBtn      = document.getElementById('clearPhoto');
+  var formSuccess   = document.getElementById('formSuccess');
+  var submitBtn     = document.getElementById('submitSuccess');
+
+  function showPanel(panel) {
+    [mainActions, successPanel, failReasonBox].forEach(function (el) {
+      if (el) el.style.display = 'none';
+    });
+    if (panel) {
+      panel.style.display = 'block';
+      panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+
+  function resetToMain() {
+    if (mainActions)   mainActions.style.display   = 'block';
+    if (successPanel)  successPanel.style.display   = 'none';
+    if (failReasonBox) failReasonBox.style.display  = 'none';
+  }
+
+  /* ── Button handlers ──────────────────────────────────────── */
+  if (btnOk)        btnOk.addEventListener('click', function () { showPanel(successPanel); });
+  if (btnFail)      btnFail.addEventListener('click', function () { showPanel(failReasonBox); });
+  if (cancelSuccess)cancelSuccess.addEventListener('click', resetToMain);
+  if (cancelFail)   cancelFail.addEventListener('click', resetToMain);
+
+  /* ── Photo preview ─────────────────────────────────────────── */
+  if (photoInput) {
+    photoInput.addEventListener('change', function () {
+      var file = this.files[0];
+      if (!file) return;
+
+      if (file.size > 10 * 1024 * 1024) {
+        showToast('Ảnh quá lớn (tối đa 10 MB). Vui lòng chọn ảnh khác.', 'warning');
+        this.value = '';
+        return;
+      }
+
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        if (photoPreview) photoPreview.src = e.target.result;
+        if (photoWrap)    photoWrap.style.display = 'block';
+        if (photoDropzone) {
+          photoDropzone.style.borderColor = '#16a34a';
+          photoDropzone.style.background  = 'rgba(240,253,244,.9)';
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', function () {
+      if (photoInput)   photoInput.value   = '';
+      if (photoPreview) photoPreview.src   = '';
+      if (photoWrap)    photoWrap.style.display = 'none';
+      if (photoDropzone) {
+        photoDropzone.style.borderColor = '';
+        photoDropzone.style.background  = '';
+      }
+    });
+  }
+
+  /* ── Submit: confirm before POST ──────────────────────────── */
+  if (formSuccess) {
+    formSuccess.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var hasPhoto = photoInput && photoInput.files && photoInput.files.length > 0;
+      var msg = hasPhoto
+        ? 'Xác nhận giao hàng <strong>THÀNH CÔNG</strong> và gửi ảnh minh chứng?<br>' +
+          '<small class="text-muted">Ví COD sẽ được cộng tiền ngay lập tức.</small>'
+        : 'Xác nhận giao hàng <strong>THÀNH CÔNG</strong>?<br>' +
+          '<small class="text-muted">Bạn chưa chọn ảnh minh chứng (không bắt buộc).</small>';
+
+      var confirmed = await showConfirm(
+        'Xác nhận giao thành công', msg, 'Xác nhận', 'success'
+      );
+      if (confirmed) {
+        if (submitBtn) {
+          submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang lưu…';
+          submitBtn.disabled  = true;
+        }
+        formSuccess.submit();
+      }
+    });
+  }
+})();
+</script>
+{% endblock %}

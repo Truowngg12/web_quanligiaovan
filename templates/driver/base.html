@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#3730a3">
+  <title>{% block title %}Tác vụ{% endblock %} — Tài xế</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body style="background:#f1f5f9;padding:0;margin:0;">
+
+<div class="driver-app">
+
+  <!-- Top Navbar -->
+  <nav class="drv-topbar">
+    <div class="drv-topbar-brand">
+      {% block nav_left %}
+      <i class="bi bi-truck"></i>
+      <span>{{ session.user_name }}</span>
+      {% endblock %}
+    </div>
+    <div style="display:flex;align-items:center;gap:.4rem;">
+      {% block nav_right %}{% endblock %}
+    </div>
+  </nav>
+
+  <!-- Flash messages → converted to toasts by JS -->
+  <div style="display:none;" id="drvFlashZone">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+      <div class="alert alert-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+  </div>
+
+  <!-- Page body -->
+  <div class="drv-content">
+    {% block content %}{% endblock %}
+  </div>
+
+  <!-- ═══ Bottom Navigation Bar ═══ -->
+  <nav class="drv-bottom-nav">
+    <a href="{{ url_for('driver_tasks', tab='active') }}"
+       class="drv-nav-item {% if request.endpoint=='driver_tasks' and request.args.get('tab','active')=='active' %}active{% endif %}">
+      <i class="bi bi-truck"></i>
+      <span>Đang giao</span>
+    </a>
+    <a href="{{ url_for('driver_tasks', tab='done') }}"
+       class="drv-nav-item {% if request.endpoint=='driver_tasks' and request.args.get('tab')=='done' %}active{% endif %}">
+      <i class="bi bi-check2-circle"></i>
+      <span>Hoàn thành</span>
+    </a>
+    <a href="{{ url_for('driver_tasks', tab='all') }}"
+       class="drv-nav-item {% if request.endpoint=='driver_tasks' and request.args.get('tab')=='all' %}active{% endif %}">
+      <i class="bi bi-list-ul"></i>
+      <span>Tất cả</span>
+    </a>
+    <a href="{{ url_for('logout') }}" class="drv-nav-item"
+       onclick="return confirm('Đăng xuất khỏi tài khoản?')">
+      <i class="bi bi-box-arrow-right"></i>
+      <span>Đăng xuất</span>
+    </a>
+  </nav>
+
+</div><!-- /driver-app -->
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+// Convert driver flash messages to toasts
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('#drvFlashZone .alert').forEach(function (al) {
+    const type = al.classList.contains('alert-success') ? 'success'
+               : al.classList.contains('alert-danger')  ? 'danger'
+               : al.classList.contains('alert-warning') ? 'warning' : 'info';
+    showToast(al.innerText.trim(), type);
+    al.remove();
+  });
+});
+</script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

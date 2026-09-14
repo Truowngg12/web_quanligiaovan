@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tra cứu vận đơn — VanDon System</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    /* ── Reset & Base ─────────────────────────────────── */
+    *,*::before,*::after{box-sizing:border-box;}
+    body{
+      margin:0;font-family:'Inter','Segoe UI',system-ui,sans-serif;
+      background:#f1f5f9;color:#334155;min-height:100vh;
+      -webkit-font-smoothing:antialiased;
+    }
+
+    /* ── Animations ───────────────────────────────────── */
+    @keyframes fadeInUp{
+      from{opacity:0;transform:translateY(22px);}
+      to  {opacity:1;transform:translateY(0);}
+    }
+    @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+    @keyframes pulse-ring{
+      0%  {box-shadow:0 0 0 0 rgba(79,70,229,.45);}
+      70% {box-shadow:0 0 0 12px rgba(79,70,229,0);}
+      100%{box-shadow:0 0 0 0 rgba(79,70,229,0);}
+    }
+    @keyframes dash-flow{
+      to{stroke-dashoffset:-24;}
+    }
+    .anim-up  {animation:fadeInUp .5s ease both;}
+    .anim-in  {animation:fadeIn   .4s ease both;}
+    .anim-d1  {animation-delay:.08s;}
+    .anim-d2  {animation-delay:.16s;}
+    .anim-d3  {animation-delay:.24s;}
+    .anim-d4  {animation-delay:.32s;}
+
+    /* ── Hero / Header ────────────────────────────────── */
+    .hero{
+      background:linear-gradient(135deg,#1e1b4b 0%,#312e81 45%,#4338ca 100%);
+      padding:3rem 1rem 5rem;
+      position:relative;overflow:hidden;
+    }
+    .hero::before{
+      content:'';position:absolute;top:-60px;right:-60px;
+      width:300px;height:300px;border-radius:50%;
+      background:rgba(99,102,241,.18);pointer-events:none;
+    }
+    .hero::after{
+      content:'';position:absolute;bottom:-80px;left:-40px;
+      width:220px;height:220px;border-radius:50%;
+      background:rgba(167,139,250,.12);pointer-events:none;
+    }
+    .hero-brand{
+      display:flex;align-items:center;gap:.75rem;
+      margin-bottom:2.5rem;
+    }
+    .hero-logo{
+      width:42px;height:42px;border-radius:12px;
+      background:linear-gradient(135deg,#6366f1,#a78bfa);
+      display:flex;align-items:center;justify-content:center;
+      font-size:1.25rem;color:#fff;
+      box-shadow:0 4px 14px rgba(99,102,241,.5);
+    }
+    .hero-brand-name{
+      font-size:1.05rem;font-weight:800;color:#fff;letter-spacing:-.01em;
+    }
+    .hero-brand-sub{font-size:.72rem;color:rgba(199,210,254,.65);}
+
+    .hero-title{
+      font-size:clamp(1.5rem,4vw,2.25rem);
+      font-weight:900;color:#fff;letter-spacing:-.02em;
+      line-height:1.2;margin-bottom:.625rem;
+      position:relative;z-index:1;
+    }
+    .hero-sub{
+      font-size:.92rem;color:rgba(199,210,254,.78);
+      margin-bottom:0;position:relative;z-index:1;
+    }
+
+    /* ── Search Card ──────────────────────────────────── */
+    .search-card{
+      background:#fff;border-radius:20px;
+      box-shadow:0 20px 50px rgba(0,0,0,.14),0 4px 12px rgba(0,0,0,.07);
+      padding:2rem;margin-top:-2.5rem;position:relative;z-index:10;
+    }
+    .search-label{
+      font-size:.78rem;font-weight:700;color:#475569;
+      text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem;
+    }
+    .search-wrap{
+      display:flex;gap:.625rem;
+    }
+    .search-input{
+      flex:1;height:50px;padding:0 1.1rem 0 3rem;
+      border:2px solid #e2e8f0;border-radius:12px;
+      font-size:.95rem;font-weight:600;color:#0f172a;
+      letter-spacing:.04em;font-family:'Courier New',monospace;
+      transition:border-color .18s,box-shadow .18s;
+      outline:none;
+    }
+    .search-input:focus{border-color:#4f46e5;box-shadow:0 0 0 4px rgba(79,70,229,.12);}
+    .search-input::placeholder{font-family:inherit;font-weight:400;letter-spacing:0;color:#94a3b8;}
+    .search-icon-wrap{
+      position:absolute;left:1.1rem;top:50%;transform:translateY(-50%);
+      color:#94a3b8;font-size:1.05rem;pointer-events:none;
+    }
+    .search-btn{
+      height:50px;padding:0 1.5rem;border-radius:12px;
+      background:linear-gradient(135deg,#4f46e5,#7c3aed);
+      color:#fff;border:none;font-weight:700;font-size:.9rem;
+      cursor:pointer;white-space:nowrap;
+      box-shadow:0 4px 14px rgba(79,70,229,.38);
+      transition:all .18s;
+      display:flex;align-items:center;gap:.5rem;
+    }
+    .search-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(79,70,229,.45);}
+    .search-btn:active{transform:scale(.97);}
+
+    /* ── Error / Not found state ──────────────────────── */
+    .not-found-card{
+      background:#fff;border-radius:16px;
+      border-left:4px solid #dc2626;
+      padding:1.25rem 1.5rem;
+      box-shadow:0 2px 8px rgba(0,0,0,.06);
+      display:flex;align-items:flex-start;gap:.875rem;
+    }
+    .not-found-icon{
+      width:40px;height:40px;border-radius:50%;
+      background:#fef2f2;display:flex;align-items:center;
+      justify-content:center;font-size:1.1rem;color:#dc2626;flex-shrink:0;
+    }
+
+    /* ── Package Summary Card ─────────────────────────── */
+    .pkg-card{
+      background:#fff;border-radius:16px;
+      box-shadow:0 4px 16px rgba(0,0,0,.08);
+      overflow:hidden;
+    }
+    .pkg-header{
+      background:linear-gradient(135deg,#1e1b4b,#4338ca);
+      padding:1.25rem 1.5rem;
+      display:flex;align-items:center;justify-content:space-between;
+      flex-wrap:wrap;gap:.75rem;
+    }
+    .pkg-id-label{font-size:.67rem;color:rgba(199,210,254,.65);text-transform:uppercase;letter-spacing:.1em;font-weight:700;}
+    .pkg-id{
+      font-family:'Courier New',monospace;font-size:1.1rem;
+      font-weight:800;color:#fff;letter-spacing:.06em;margin-top:.15rem;
+    }
+    .pkg-status-pill{
+      padding:.4rem 1rem;border-radius:20px;
+      font-size:.78rem;font-weight:800;letter-spacing:.02em;
+      display:flex;align-items:center;gap:.4rem;
+    }
+    .pkg-status-pill.pending    {background:rgba(148,163,184,.2);color:#e2e8f0;}
+    .pkg-status-pill.delivering {background:rgba(245,158,11,.2); color:#fde68a;}
+    .pkg-status-pill.success    {background:rgba(22,163,74,.2);  color:#86efac;}
+    .pkg-status-pill.failed     {background:rgba(220,38,38,.2);  color:#fca5a5;}
+    .pkg-status-pill.reconciled {background:rgba(99,102,241,.2); color:#c7d2fe;}
+
+    .pkg-body{padding:1.375rem 1.5rem;}
+    .pkg-meta-grid{
+      display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;
+    }
+    .pkg-meta-item{}
+    .pkg-meta-label{
+      font-size:.67rem;text-transform:uppercase;letter-spacing:.08em;
+      font-weight:700;color:#94a3b8;margin-bottom:.3rem;
+    }
+    .pkg-meta-value{font-size:.92rem;font-weight:700;color:#0f172a;}
+    .pkg-meta-value.highlight{font-size:1.1rem;color:#dc2626;}
+
+    /* ── Timeline ─────────────────────────────────────── */
+    .timeline-section{padding:0;}
+    .timeline-title{
+      font-size:.78rem;font-weight:800;text-transform:uppercase;
+      letter-spacing:.1em;color:#94a3b8;margin-bottom:1.5rem;
+    }
+    .tl{list-style:none;padding:0;margin:0;position:relative;}
+    .tl::before{
+      content:'';position:absolute;left:19px;top:20px;
+      bottom:20px;width:2px;
+      background:linear-gradient(to bottom,#c7d2fe,transparent);
+    }
+    .tl-item{
+      position:relative;padding:0 0 1.5rem 56px;
+      animation:fadeInUp .45s ease both;
+    }
+    .tl-item:last-child{padding-bottom:0;}
+
+    /* Dot */
+    .tl-dot{
+      position:absolute;left:6px;top:3px;
+      width:28px;height:28px;border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      font-size:.85rem;border:3px solid #fff;
+      box-shadow:0 2px 8px rgba(0,0,0,.12);
+      z-index:1;flex-shrink:0;
+    }
+    .tl-dot.dot-create     {background:#6366f1;color:#fff;}
+    .tl-dot.dot-pending    {background:#94a3b8;color:#fff;}
+    .tl-dot.dot-delivering {background:#f59e0b;color:#fff;}
+    .tl-dot.dot-success    {background:#16a34a;color:#fff;}
+    .tl-dot.dot-failed     {background:#dc2626;color:#fff;}
+    .tl-dot.dot-reconciled {background:#4f46e5;color:#fff;}
+    /* Pulse on latest item */
+    .tl-item.is-latest .tl-dot{animation:pulse-ring 2s ease infinite;}
+
+    /* Card per step */
+    .tl-card{
+      background:#fff;border-radius:12px;padding:.875rem 1.1rem;
+      box-shadow:0 2px 8px rgba(0,0,0,.06);
+      border-left:3px solid transparent;
+      transition:transform .15s,box-shadow .15s;
+    }
+    .tl-card:hover{transform:translateX(4px);box-shadow:0 4px 14px rgba(0,0,0,.1);}
+    .tl-card.card-create     {border-left-color:#6366f1;}
+    .tl-card.card-pending    {border-left-color:#94a3b8;}
+    .tl-card.card-delivering {border-left-color:#f59e0b;}
+    .tl-card.card-success    {border-left-color:#16a34a;}
+    .tl-card.card-failed     {border-left-color:#dc2626;}
+    .tl-card.card-reconciled {border-left-color:#4f46e5;}
+
+    .tl-status{
+      font-size:.82rem;font-weight:800;color:#0f172a;margin-bottom:.25rem;
+      display:flex;align-items:center;gap:.4rem;
+    }
+    .tl-time{font-size:.72rem;color:#94a3b8;font-weight:500;}
+    .tl-note{
+      margin-top:.45rem;font-size:.79rem;color:#64748b;
+      background:#f8fafc;padding:.4rem .65rem;border-radius:8px;
+      display:flex;align-items:flex-start;gap:.4rem;
+    }
+
+    /* ── Status step tracker ──────────────────────────── */
+    .steps-bar{
+      display:flex;align-items:center;
+      background:#fff;border-radius:14px;padding:1.25rem 1.5rem;
+      box-shadow:0 2px 8px rgba(0,0,0,.06);
+      overflow-x:auto;gap:0;margin-bottom:0;
+    }
+    .step{
+      display:flex;flex-direction:column;align-items:center;
+      gap:.35rem;flex:1;min-width:72px;position:relative;
+    }
+    .step:not(:last-child)::after{
+      content:'';position:absolute;top:15px;left:calc(50% + 15px);
+      right:calc(-50% + 15px);height:2px;background:#e2e8f0;
+      z-index:0;transition:background .3s;
+    }
+    .step.done:not(:last-child)::after{background:#4f46e5;}
+    .step-dot{
+      width:30px;height:30px;border-radius:50%;border:2px solid #e2e8f0;
+      background:#fff;display:flex;align-items:center;justify-content:center;
+      font-size:.8rem;color:#94a3b8;z-index:1;transition:all .3s;
+    }
+    .step.done .step-dot{background:#4f46e5;border-color:#4f46e5;color:#fff;box-shadow:0 2px 8px rgba(79,70,229,.4);}
+    .step.current .step-dot{background:#f59e0b;border-color:#f59e0b;color:#fff;animation:pulse-ring 1.8s ease infinite;}
+    .step.failed .step-dot{background:#dc2626;border-color:#dc2626;color:#fff;}
+    .step-label{font-size:.63rem;font-weight:600;color:#94a3b8;text-align:center;white-space:nowrap;}
+    .step.done .step-label{color:#4f46e5;}
+    .step.current .step-label{color:#f59e0b;}
+    .step.failed .step-label{color:#dc2626;}
+
+    /* ── Navbar strip ─────────────────────────────────── */
+    .site-nav{
+      background:rgba(30,27,75,.96);backdrop-filter:blur(8px);
+      padding:.7rem 1.5rem;display:flex;align-items:center;
+      justify-content:space-between;
+      position:sticky;top:0;z-index:999;
+    }
+    .nav-logo{display:flex;align-items:center;gap:.6rem;text-decoration:none;}
+    .nav-logo-icon{
+      width:32px;height:32px;border-radius:9px;
+      background:linear-gradient(135deg,#4f46e5,#7c3aed);
+      display:flex;align-items:center;justify-content:center;
+      font-size:.9rem;color:#fff;
+    }
+    .nav-logo-text{font-size:.9rem;font-weight:800;color:#fff;}
+    .nav-links{display:flex;align-items:center;gap:1rem;}
+    .nav-link-item{
+      color:rgba(199,210,254,.75);font-size:.82rem;font-weight:500;
+      text-decoration:none;transition:color .15s;
+    }
+    .nav-link-item:hover{color:#fff;}
+    .nav-login-btn{
+      background:rgba(99,102,241,.25);border:1px solid rgba(99,102,241,.5);
+      color:#c7d2fe;padding:.35rem .9rem;border-radius:8px;font-size:.8rem;
+      font-weight:600;text-decoration:none;transition:all .15s;
+    }
+    .nav-login-btn:hover{background:rgba(99,102,241,.45);color:#fff;}
+
+    /* ── Footer ───────────────────────────────────────── */
+    .site-footer{
+      text-align:center;padding:2rem 1rem;
+      font-size:.75rem;color:#94a3b8;
+      border-top:1px solid #e2e8f0;background:#fff;margin-top:3rem;
+    }
+
+    /* ── Empty hero illus ─────────────────────────────── */
+    .empty-illus{
+      text-align:center;padding:2.5rem 1rem;
+    }
+    .empty-illus-icon{
+      width:80px;height:80px;border-radius:50%;
+      background:linear-gradient(135deg,#eef2ff,#e0e7ff);
+      display:flex;align-items:center;justify-content:center;
+      font-size:2rem;color:#6366f1;margin:0 auto 1rem;
+      box-shadow:0 4px 16px rgba(79,70,229,.15);
+    }
+    .empty-illus-title{font-size:1rem;font-weight:700;color:#0f172a;margin-bottom:.4rem;}
+    .empty-illus-sub{font-size:.83rem;color:#64748b;}
+
+    /* ── Responsive ───────────────────────────────────── */
+    @media(max-width:575px){
+      .hero{padding:2rem 1rem 4rem;}
+      .search-wrap{flex-direction:column;}
+      .search-btn{width:100%;justify-content:center;}
+      .search-card{padding:1.25rem;}
+      .pkg-meta-grid{grid-template-columns:1fr 1fr;}
+      .steps-bar{padding:.875rem 1rem;}
+      .tl-card{padding:.75rem .875rem;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     TOP NAV
+     ══════════════════════════════════════ -->
+<nav class="site-nav">
+  <a href="{{ url_for('track_waybill') }}" class="nav-logo">
+    <div class="nav-logo-icon"><i class="bi bi-box-seam"></i></div>
+    <span class="nav-logo-text">VanDon System</span>
+  </a>
+  <div class="nav-links">
+    <a href="{{ url_for('track_waybill') }}" class="nav-link-item">Tra cứu</a>
+    <a href="{{ url_for('login') }}" class="nav-login-btn">
+      <i class="bi bi-shield-lock me-1"></i>Đăng nhập
+    </a>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════
+     HERO SECTION
+     ══════════════════════════════════════ -->
+<section class="hero">
+  <div class="container" style="max-width:760px;">
+    <div class="anim-in">
+      <h1 class="hero-title">
+        <i class="bi bi-search me-2" style="font-size:1.4rem;opacity:.7;"></i>
+        Tra cứu vận đơn
+      </h1>
+      <p class="hero-sub">Nhập mã vận đơn để xem trạng thái giao hàng và lịch sử xử lý theo thời gian thực.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     MAIN CONTENT
+     ══════════════════════════════════════ -->
+<div class="container pb-5" style="max-width:760px;">
+
+  <!-- Search card -->
+  <div class="search-card anim-up">
+    <div class="search-label">Mã vận đơn (Tracking ID)</div>
+    <form method="POST" action="{{ url_for('track_waybill') }}" novalidate>
+      <div class="search-wrap">
+        <div style="position:relative;flex:1;">
+          <span class="search-icon-wrap"><i class="bi bi-upc-scan"></i></span>
+          <input type="text" name="ma_van_don" class="search-input"
+                 placeholder="VD20240101XXXXX"
+                 value="{{ query }}"
+                 required autofocus autocomplete="off" maxlength="30">
+        </div>
+        <button type="submit" class="search-btn">
+          <i class="bi bi-search"></i>
+          <span>Tra cứu</span>
+        </button>
+      </div>
+    </form>
+    <div style="margin-top:.75rem;font-size:.74rem;color:#94a3b8;">
+      <i class="bi bi-info-circle me-1"></i>
+      Mã vận đơn bắt đầu bằng <code style="background:#f1f5f9;padding:.1rem .35rem;border-radius:4px;font-size:.72rem;">VD</code>
+      theo sau là ngày và số thứ tự. Ví dụ: <code style="background:#f1f5f9;padding:.1rem .35rem;border-radius:4px;font-size:.72rem;">VD2024010100001</code>
+    </div>
+  </div>
+
+  <!-- ── ERROR state ───────────────────── -->
+  {% if error %}
+  <div class="not-found-card mt-4 anim-up anim-d1">
+    <div class="not-found-icon"><i class="bi bi-x-circle-fill"></i></div>
+    <div>
+      <div style="font-size:.9rem;font-weight:700;color:#dc2626;margin-bottom:.25rem;">Không tìm thấy</div>
+      <div style="font-size:.83rem;color:#64748b;">{{ error|safe }}</div>
+      <div style="font-size:.76rem;color:#94a3b8;margin-top:.5rem;">
+        Hãy kiểm tra lại mã vận đơn từ tin nhắn/email xác nhận từ người gửi.
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ── RESULT ────────────────────────── -->
+  {% if waybill %}
+  {% set s = waybill.TrangThai %}
+
+  <!-- Step progress bar -->
+  <div class="mt-4 anim-up anim-d1">
+    {% set is_failed = (s == 'Giao thất bại') %}
+    {% set step_pending    = s in ['Chờ điều phối','Đang đi giao','Thành công','Giao thất bại','Đã đối soát'] %}
+    {% set step_delivering = s in ['Đang đi giao','Thành công','Giao thất bại','Đã đối soát'] %}
+    {% set step_done       = s in ['Thành công','Đã đối soát'] %}
+    {% set step_reconciled = s == 'Đã đối soát' %}
+
+    <div class="steps-bar mb-4">
+      <div class="step done">
+        <div class="step-dot"><i class="bi bi-plus-circle-fill"></i></div>
+        <div class="step-label">Đã tạo</div>
+      </div>
+      <div class="step {{ 'done' if step_pending and s!='Chờ điều phối' else ('current' if s=='Chờ điều phối' else '') }}">
+        <div class="step-dot"><i class="bi bi-clock-history"></i></div>
+        <div class="step-label">Chờ giao</div>
+      </div>
+      <div class="step {{ 'failed' if is_failed else ('done' if step_delivering and s not in ['Đang đi giao','Giao thất bại'] else ('current' if s=='Đang đi giao' else '')) }}">
+        <div class="step-dot">
+          {% if is_failed %}<i class="bi bi-x-circle-fill"></i>
+          {% else %}<i class="bi bi-truck"></i>{% endif %}
+        </div>
+        <div class="step-label">{% if is_failed %}Thất bại{% else %}Đang giao{% endif %}</div>
+      </div>
+      <div class="step {{ 'done' if step_done else '' }}">
+        <div class="step-dot"><i class="bi bi-check-circle-fill"></i></div>
+        <div class="step-label">Thành công</div>
+      </div>
+      <div class="step {{ 'done' if step_reconciled else '' }}">
+        <div class="step-dot"><i class="bi bi-shield-check"></i></div>
+        <div class="step-label">Đối soát</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Package summary card -->
+  <div class="pkg-card anim-up anim-d2">
+    <div class="pkg-header">
+      <div>
+        <div class="pkg-id-label">Mã vận đơn</div>
+        <div class="pkg-id">{{ waybill.MaVanDon }}</div>
+      </div>
+      <!-- Status pill -->
+      {% if s == 'Chờ điều phối' %}
+        <div class="pkg-status-pill pending"><i class="bi bi-clock"></i>{{ s }}</div>
+      {% elif s == 'Đang đi giao' %}
+        <div class="pkg-status-pill delivering"><i class="bi bi-truck"></i>{{ s }}</div>
+      {% elif s == 'Thành công' %}
+        <div class="pkg-status-pill success"><i class="bi bi-check-circle-fill"></i>{{ s }}</div>
+      {% elif s == 'Giao thất bại' %}
+        <div class="pkg-status-pill failed"><i class="bi bi-x-circle-fill"></i>{{ s }}</div>
+      {% else %}
+        <div class="pkg-status-pill reconciled"><i class="bi bi-shield-check"></i>{{ s }}</div>
+      {% endif %}
+    </div>
+
+    <div class="pkg-body">
+      {% set p = waybill._masked_info %}
+      <div class="pkg-meta-grid">
+        <!-- Recipient name -->
+        <div class="pkg-meta-item">
+          <div class="pkg-meta-label"><i class="bi bi-person me-1"></i>Người nhận</div>
+          <div class="pkg-meta-value">{{ p[0] if p|length > 0 else '—' }}</div>
+        </div>
+        <!-- Masked phone -->
+        <div class="pkg-meta-item">
+          <div class="pkg-meta-label"><i class="bi bi-telephone me-1"></i>Điện thoại</div>
+          <div class="pkg-meta-value">{{ p[1] if p|length > 1 else '—' }}</div>
+        </div>
+        <!-- COD -->
+        <div class="pkg-meta-item">
+          <div class="pkg-meta-label"><i class="bi bi-cash-coin me-1"></i>Thu hộ (COD)</div>
+          <div class="pkg-meta-value {% if waybill.TienCOD > 0 %}highlight{% endif %}">
+            {{ waybill.TienCOD|vnd if waybill.TienCOD > 0 else 'Không thu' }}
+          </div>
+        </div>
+        <!-- Created at -->
+        <div class="pkg-meta-item">
+          <div class="pkg-meta-label"><i class="bi bi-calendar3 me-1"></i>Ngày tạo</div>
+          <div class="pkg-meta-value">{{ waybill.NgayTao|dt }}</div>
+        </div>
+        <!-- Address -->
+        {% if p|length > 2 %}
+        <div class="pkg-meta-item" style="grid-column:1/-1;">
+          <div class="pkg-meta-label"><i class="bi bi-geo-alt me-1"></i>Địa chỉ giao</div>
+          <div class="pkg-meta-value">{{ p[2] }}</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  {% if logs %}
+  <div class="mt-4 anim-up anim-d3">
+    <div class="timeline-title">
+      <i class="bi bi-clock-history me-2"></i>Lịch sử vận đơn — {{ logs|length }} sự kiện
+    </div>
+
+    {% macro dot_class(status) %}
+      {%- if status == 'Chờ điều phối' %}dot-pending
+      {%- elif status == 'Đang đi giao'  %}dot-delivering
+      {%- elif status == 'Thành công'    %}dot-success
+      {%- elif status == 'Giao thất bại' %}dot-failed
+      {%- elif status == 'Đã đối soát'   %}dot-reconciled
+      {%- else %}dot-create{% endif -%}
+    {% endmacro %}
+    {% macro card_class(status) %}
+      {%- if status == 'Chờ điều phối' %}card-pending
+      {%- elif status == 'Đang đi giao'  %}card-delivering
+      {%- elif status == 'Thành công'    %}card-success
+      {%- elif status == 'Giao thất bại' %}card-failed
+      {%- elif status == 'Đã đối soát'   %}card-reconciled
+      {%- else %}card-create{% endif -%}
+    {% endmacro %}
+    {% macro step_icon(status) %}
+      {%- if status == 'Chờ điều phối' %}<i class="bi bi-clock-history"></i>
+      {%- elif status == 'Đang đi giao'  %}<i class="bi bi-truck"></i>
+      {%- elif status == 'Thành công'    %}<i class="bi bi-check-circle-fill"></i>
+      {%- elif status == 'Giao thất bại' %}<i class="bi bi-x-circle-fill"></i>
+      {%- elif status == 'Đã đối soát'   %}<i class="bi bi-shield-check"></i>
+      {%- else %}<i class="bi bi-plus-circle-fill"></i>{% endif -%}
+    {% endmacro %}
+
+    <ul class="tl">
+      {% for log in logs %}
+      {% set is_latest = loop.last %}
+      <li class="tl-item {% if is_latest %}is-latest{% endif %}"
+          style="animation-delay:{{ loop.index0 * 0.07 }}s;">
+
+        <div class="tl-dot {{ dot_class(log.TrangThaiMoi) }}">
+          {{ step_icon(log.TrangThaiMoi) }}
+        </div>
+
+        <div class="tl-card {{ card_class(log.TrangThaiMoi) }}">
+          <div class="tl-status">
+            {{ log.TrangThaiMoi }}
+            {% if is_latest %}
+            <span style="font-size:.65rem;background:#dcfce7;color:#15803d;
+                         padding:.08rem .45rem;border-radius:10px;font-weight:700;">
+              MỚI NHẤT
+            </span>
+            {% endif %}
+          </div>
+          <div class="tl-time">
+            <i class="bi bi-clock me-1"></i>{{ log.ThoiGian|dt }}
+          </div>
+          {% if log.GhiChu %}
+          <div class="tl-note">
+            <i class="bi bi-chat-left-text flex-shrink-0" style="font-size:.8rem;margin-top:.1rem;"></i>
+            <span>{{ log.GhiChu }}</span>
+          </div>
+          {% endif %}
+          {% if log.TrangThaiCu %}
+          <div style="margin-top:.35rem;font-size:.69rem;color:#94a3b8;">
+            Trước đó: <em>{{ log.TrangThaiCu }}</em>
+            <i class="bi bi-arrow-right mx-1" style="font-size:.62rem;"></i>
+            <strong style="color:#475569;">{{ log.TrangThaiMoi }}</strong>
+          </div>
+          {% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <!-- Privacy note -->
+  <div class="mt-4 p-3 rounded-3 d-flex gap-2 anim-up anim-d4"
+       style="background:#fffbeb;border:1px solid #fde68a;font-size:.76rem;color:#92400e;">
+    <i class="bi bi-shield-fill-check flex-shrink-0 mt-1" style="color:#d97706;"></i>
+    <span>
+      Thông tin số điện thoại đã được ẩn một phần để bảo vệ quyền riêng tư.
+      Nếu cần hỗ trợ, vui lòng liên hệ người gửi hoặc đơn vị vận chuyển.
+    </span>
+  </div>
+
+  {% elif not error %}
+  <!-- Empty / initial state -->
+  <div class="mt-4 anim-up anim-d1">
+    <div style="background:#fff;border-radius:16px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden;">
+      <div class="empty-illus">
+        <div class="empty-illus-icon"><i class="bi bi-box-seam"></i></div>
+        <div class="empty-illus-title">Nhập mã để tra cứu</div>
+        <div class="empty-illus-sub">
+          Mã vận đơn được gửi kèm theo xác nhận đặt hàng từ người gửi hoặc shop.
+        </div>
+      </div>
+
+      <!-- Sample info cards -->
+      <div class="row g-0" style="border-top:1px solid #f1f5f9;">
+        <div class="col-4 p-3 text-center" style="border-right:1px solid #f1f5f9;">
+          <div style="font-size:1.3rem;margin-bottom:.3rem;">⚡</div>
+          <div style="font-size:.73rem;font-weight:700;color:#0f172a;">Cập nhật thực thời</div>
+          <div style="font-size:.68rem;color:#94a3b8;margin-top:.2rem;">Trạng thái tức thời</div>
+        </div>
+        <div class="col-4 p-3 text-center" style="border-right:1px solid #f1f5f9;">
+          <div style="font-size:1.3rem;margin-bottom:.3rem;">🔒</div>
+          <div style="font-size:.73rem;font-weight:700;color:#0f172a;">Bảo mật riêng tư</div>
+          <div style="font-size:.68rem;color:#94a3b8;margin-top:.2rem;">Ẩn thông tin nhạy cảm</div>
+        </div>
+        <div class="col-4 p-3 text-center">
+          <div style="font-size:1.3rem;margin-bottom:.3rem;">📱</div>
+          <div style="font-size:.73rem;font-weight:700;color:#0f172a;">Mọi thiết bị</div>
+          <div style="font-size:.68rem;color:#94a3b8;margin-top:.2rem;">Responsive hoàn toàn</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div><!-- /container -->
+
+<!-- Footer -->
+<footer class="site-footer">
+  <div>© 2024 VanDon System — Hệ thống Quản lý Vận đơn Chặng cuối</div>
+  <div style="margin-top:.35rem;">
+    <a href="{{ url_for('login') }}" style="color:#6366f1;text-decoration:none;">Đăng nhập hệ thống</a>
+    <span style="margin:0 .5rem;color:#e2e8f0;">·</span>
+    <a href="{{ url_for('track_waybill') }}" style="color:#6366f1;text-decoration:none;">Tra cứu vận đơn</a>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// Auto-uppercase tracking input
+document.addEventListener('DOMContentLoaded', function () {
+  const inp = document.querySelector('input[name="ma_van_don"]');
+  if (inp) {
+    inp.addEventListener('input', function () {
+      const pos = this.selectionStart;
+      this.value = this.value.toUpperCase();
+      this.setSelectionRange(pos, pos);
+    });
+  }
+  // Animate timeline items on scroll (IntersectionObserver)
+  if ('IntersectionObserver' in window) {
+    const obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) {
+          e.target.style.opacity = '1';
+          e.target.style.transform = 'translateY(0)';
+        }
+      });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.tl-item').forEach(function (el) {
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(16px)';
+      el.style.transition = 'opacity .45s ease, transform .45s ease';
+      obs.observe(el);
+    });
+  }
+});
+</script>
+</body>
+</html>

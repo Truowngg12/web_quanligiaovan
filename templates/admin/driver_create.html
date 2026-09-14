@@ -1,0 +1,88 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Thêm tài xế{% endblock %}
+{% block breadcrumb %}Thêm tài xế mới{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-6">
+
+    <div class="mb-3">
+      <a href="{{ url_for('admin_drivers') }}" class="back-link">
+        <i class="bi bi-arrow-left me-1"></i>Quay lại danh sách tài xế
+      </a>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-header-title">
+          <i class="bi bi-person-plus text-indigo"></i> Thêm tài xế mới
+        </div>
+      </div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('admin_create_driver') }}" novalidate>
+
+          <div class="mb-3">
+            <label class="form-label">Họ và tên <span class="text-danger">*</span></label>
+            <div class="input-icon-wrap">
+              <i class="bi bi-person"></i>
+              <input type="text" name="ten_tai_xe" class="form-control"
+                     placeholder="Nguyễn Văn An" required maxlength="100" autofocus>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Số điện thoại <span class="text-danger">*</span></label>
+            <div class="input-icon-wrap">
+              <i class="bi bi-telephone"></i>
+              <input type="text" name="dien_thoai" class="form-control"
+                     placeholder="09xxxxxxxx" required maxlength="15">
+            </div>
+            <div class="form-text">Dùng để đăng nhập trên thiết bị tài xế.</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Khu vực phụ trách</label>
+            <div class="input-icon-wrap">
+              <i class="bi bi-geo-alt"></i>
+              <input type="text" name="khu_vuc" class="form-control"
+                     placeholder="Quận 1, Quận 3…" maxlength="100">
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label">Mật khẩu <span class="text-danger">*</span></label>
+            <div class="input-icon-wrap">
+              <i class="bi bi-lock"></i>
+              <input type="password" name="mat_khau" class="form-control"
+                     placeholder="Tối thiểu 6 ký tự" required minlength="6">
+            </div>
+            <div class="form-text">Tài xế dùng mật khẩu này để đăng nhập bằng SĐT.</div>
+          </div>
+
+          <div class="d-flex gap-2 justify-content-end">
+            <a href="{{ url_for('admin_drivers') }}" class="btn btn-outline-secondary">
+              <i class="bi bi-x-lg me-1"></i>Huỷ
+            </a>
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-person-plus-fill me-1"></i>Tạo tài xế
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+
+    <!-- Security note -->
+    <div class="mt-3 p-3 rounded-3 d-flex gap-2 align-items-start"
+         style="background:#fffbeb;border:1px solid #fde68a;">
+      <i class="bi bi-shield-lock-fill text-warning mt-1" style="flex-shrink:0;"></i>
+      <div style="font-size:.78rem;color:#92400e;">
+        Mật khẩu được mã hóa bằng <strong>Bcrypt</strong> trước khi lưu vào cơ sở dữ liệu.
+        Hệ thống không lưu mật khẩu dạng văn bản thô.
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

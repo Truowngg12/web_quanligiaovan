@@ -1,0 +1,282 @@
+{% extends "admin/base.html" %}
+{% block title %}Cài đặt hệ thống{% endblock %}
+{% block breadcrumb %}Cài đặt hệ thống{% endblock %}
+
+{% block content %}
+
+<!-- Page header -->
+<div class="sec-hdr mb-4 anim-fade-up">
+  <div>
+    <h2 class="sec-title mb-0">Cấu hình hệ thống</h2>
+    <p class="text-muted mb-0" style="font-size:.79rem;">
+      Quản lý các thông số vận hành — thay đổi có hiệu lực ngay lập tức.
+    </p>
+  </div>
+  <button type="submit" form="settingsForm" class="btn btn-primary btn-sm">
+    <i class="bi bi-floppy-fill me-1"></i>Lưu tất cả thay đổi
+  </button>
+</div>
+
+<form id="settingsForm" method="POST" action="{{ url_for('admin_settings_update') }}">
+
+  <div class="row g-4">
+
+    <!-- ══════════════════════════════════════
+         LEFT COLUMN
+         ══════════════════════════════════════ -->
+    <div class="col-12 col-lg-8">
+
+      <!-- ─── Tài chính & Phí ─── -->
+      <div class="card mb-4 card-top-indigo anim-fade-up">
+        <div class="card-header">
+          <div class="card-header-title">
+            <i class="bi bi-cash-coin text-indigo"></i> Phí & Tài chính
+          </div>
+          <span style="font-size:.72rem;color:#94a3b8;">
+            Ảnh hưởng trực tiếp đến tính toán cước phí
+          </span>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            {% for s in settings if s.key in ['phi_co_ban','ty_le_cod','phi_toi_da'] %}
+            <div class="col-12 col-md-4">
+              <label class="form-label" for="setting_{{ s.key }}">
+                {{ s.description }}
+              </label>
+              <div class="input-icon-wrap">
+                {% if 'phi' in s.key %}
+                <i class="bi bi-currency-exchange"></i>
+                {% else %}
+                <i class="bi bi-percent"></i>
+                {% endif %}
+                <input type="{% if s.data_type == 'number' %}number{% else %}text{% endif %}"
+                       id="setting_{{ s.key }}"
+                       name="setting_{{ s.key }}"
+                       class="form-control"
+                       value="{{ s.value }}"
+                       step="{% if '.' in s.value %}0.001{% else %}1000{% endif %}"
+                       min="0">
+              </div>
+              {% if s.key == 'ty_le_cod' %}
+              <div class="form-text">Nhập dạng thập phân: 0.01 = 1%</div>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+
+          <!-- Live fee preview -->
+          <div class="mt-3 p-3 rounded-3 d-flex align-items-center gap-3"
+               style="background:#eef2ff;border:1px dashed #c7d2fe;">
+            <i class="bi bi-calculator text-indigo" style="font-size:1.2rem;flex-shrink:0;"></i>
+            <div>
+              <div style="font-size:.75rem;color:#4f46e5;font-weight:700;">Ví dụ tính phí</div>
+              <div style="font-size:.82rem;color:#334155;margin-top:.2rem;" id="feeExampleText">
+                <!-- filled by JS -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── Thông tin công ty ─── -->
+      <div class="card mb-4 card-top-green anim-fade-up anim-d1">
+        <div class="card-header">
+          <div class="card-header-title">
+            <i class="bi bi-building text-indigo"></i> Thông tin công ty
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            {% for s in settings if s.key in ['ten_cong_ty','hotline','email_lien_he'] %}
+            <div class="col-12 {% if s.key == 'ten_cong_ty' %}col-md-12{% else %}col-md-6{% endif %}">
+              <label class="form-label" for="setting_{{ s.key }}">
+                {{ s.description }}
+              </label>
+              <div class="input-icon-wrap">
+                {% if 'email' in s.key %}
+                  <i class="bi bi-envelope"></i>
+                {% elif 'hotline' in s.key %}
+                  <i class="bi bi-telephone"></i>
+                {% else %}
+                  <i class="bi bi-building"></i>
+                {% endif %}
+                <input type="{% if 'email' in s.key %}email{% else %}text{% endif %}"
+                       id="setting_{{ s.key }}"
+                       name="setting_{{ s.key }}"
+                       class="form-control"
+                       value="{{ s.value }}"
+                       maxlength="255">
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── Vận hành ─── -->
+      <div class="card anim-fade-up anim-d2">
+        <div class="card-header">
+          <div class="card-header-title">
+            <i class="bi bi-gear text-indigo"></i> Vận hành & Hệ thống
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            {% for s in settings if s.key in ['so_ngay_luu_log','kich_thuoc_anh_toi_da'] %}
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="setting_{{ s.key }}">{{ s.description }}</label>
+              <input type="number" id="setting_{{ s.key }}" name="setting_{{ s.key }}"
+                     class="form-control" value="{{ s.value }}" min="1">
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /col left -->
+
+    <!-- ══════════════════════════════════════
+         RIGHT COLUMN
+         ══════════════════════════════════════ -->
+    <div class="col-12 col-lg-4">
+
+      <!-- Toggle / Boolean settings -->
+      <div class="card mb-4 anim-fade-up anim-d1">
+        <div class="card-header">
+          <div class="card-header-title">
+            <i class="bi bi-toggles text-indigo"></i> Tính năng
+          </div>
+        </div>
+        <div class="card-body p-0">
+          {% for s in settings if s.data_type == 'boolean' %}
+          <div class="d-flex align-items-center justify-content-between px-3 py-3
+                       {% if not loop.last %}border-bottom{% endif %}">
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:.85rem;font-weight:600;color:#0f172a;">
+                {% if s.key == 'cho_phep_upload_anh' %}📷 Upload ảnh minh chứng
+                {% elif s.key == 'tu_dong_doi_soat'  %}⚡ Tự động đối soát
+                {% else %}{{ s.key }}{% endif %}
+              </div>
+              <div style="font-size:.72rem;color:#94a3b8;margin-top:.15rem;">
+                {{ s.description }}
+              </div>
+            </div>
+            <div class="form-check form-switch ms-3 mb-0 flex-shrink-0">
+              <input class="form-check-input" type="checkbox" role="switch"
+                     id="setting_{{ s.key }}" name="setting_{{ s.key }}"
+                     {% if s.value == 'true' %}checked{% endif %}
+                     style="width:2.4rem;height:1.2rem;cursor:pointer;">
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- All settings table (read-only audit view) -->
+      <div class="card anim-fade-up anim-d2">
+        <div class="card-header">
+          <div class="card-header-title">
+            <i class="bi bi-table text-indigo"></i> Tất cả cấu hình
+          </div>
+          <span style="font-size:.7rem;color:#94a3b8;">{{ settings|length }} mục</span>
+        </div>
+        <div style="max-height:340px;overflow-y:auto;">
+          <table class="table table-sm mb-0" style="font-size:.78rem;">
+            <tbody>
+              {% for s in settings %}
+              <tr>
+                <td style="color:#64748b;font-family:'Courier New',monospace;padding:.5rem .875rem;
+                            font-size:.72rem;white-space:nowrap;">{{ s.key }}</td>
+                <td style="padding:.5rem .875rem;">
+                  {% if s.data_type == 'boolean' %}
+                    {% if s.value == 'true' %}
+                    <span class="sbadge sb-success" style="font-size:.65rem;">
+                      <span class="sbadge-dot"></span>Bật
+                    </span>
+                    {% else %}
+                    <span class="sbadge sb-pending" style="font-size:.65rem;">
+                      <span class="sbadge-dot"></span>Tắt
+                    </span>
+                    {% endif %}
+                  {% elif s.data_type == 'number' and ('phi' in s.key) %}
+                  <strong style="color:#4f46e5;">{{ s.value|float|int|vnd }}</strong>
+                  {% elif s.data_type == 'number' and 'ty_le' in s.key %}
+                  <strong style="color:#4f46e5;">{{ (s.value|float * 100)|int }}%</strong>
+                  {% else %}
+                  <span style="color:#334155;">{{ s.value }}</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Danger zone -->
+      <div class="card mt-3" style="border:1px solid #fecaca;">
+        <div class="card-body p-3">
+          <div style="font-size:.8rem;font-weight:700;color:#dc2626;margin-bottom:.4rem;">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>Vùng cần chú ý
+          </div>
+          <ul style="font-size:.75rem;color:#64748b;padding-left:1.1rem;margin:0;">
+            <li>Thay đổi <code>phi_co_ban</code> / <code>ty_le_cod</code> ảnh hưởng vận đơn mới.</li>
+            <li>Vận đơn đã tạo <strong>không bị ảnh hưởng</strong> bởi thay đổi phí.</li>
+            <li>Tắt upload ảnh không xóa ảnh đã tải lên.</li>
+          </ul>
+        </div>
+      </div>
+
+    </div><!-- /col right -->
+  </div><!-- /row -->
+
+  <!-- Bottom save bar (sticky) -->
+  <div class="d-flex justify-content-end gap-2 mt-3 pt-3"
+       style="border-top:1px solid var(--border);">
+    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-secondary">
+      <i class="bi bi-x-lg me-1"></i>Huỷ
+    </a>
+    <button type="submit" class="btn btn-primary px-4">
+      <i class="bi bi-floppy-fill me-1"></i>Lưu tất cả thay đổi
+    </button>
+  </div>
+
+</form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  function updateFeePreview() {
+    const base = parseFloat(document.getElementById('setting_phi_co_ban')?.value || 20000);
+    const rate = parseFloat(document.getElementById('setting_ty_le_cod')?.value  || 0.01);
+    const max  = parseFloat(document.getElementById('setting_phi_toi_da')?.value || 500000);
+    const sample_cod = 300000;
+    const fee = Math.min(Math.max(base, base + sample_cod * rate), max);
+    const el  = document.getElementById('feeExampleText');
+    if (el) {
+      el.innerHTML =
+        `Vận đơn COD <strong style="color:#4f46e5;">${sample_cod.toLocaleString('vi-VN')} ₫</strong> → ` +
+        `Cước phí = <strong style="color:#16a34a;">${fee.toLocaleString('vi-VN')} ₫</strong>`;
+    }
+  }
+
+  ['setting_phi_co_ban','setting_ty_le_cod','setting_phi_toi_da'].forEach(function (id) {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', updateFeePreview);
+  });
+
+  updateFeePreview();
+
+  // Highlight changed inputs
+  document.querySelectorAll('#settingsForm input, #settingsForm select').forEach(function (inp) {
+    const orig = inp.type === 'checkbox' ? inp.checked : inp.value;
+    inp.addEventListener('change', function () {
+      const changed = inp.type === 'checkbox' ? inp.checked !== orig : inp.value !== String(orig);
+      inp.style.borderColor = changed ? '#4f46e5' : '';
+      inp.style.boxShadow   = changed ? '0 0 0 3px rgba(79,70,229,.14)' : '';
+    });
+  });
+});
+</script>
+{% endblock %}

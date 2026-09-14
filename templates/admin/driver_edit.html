@@ -1,0 +1,111 @@
+{% extends "admin/base.html" %}
+{% block title %}Sửa tài xế{% endblock %}
+{% block breadcrumb %}Chỉnh sửa tài xế{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-6">
+    <div class="mb-3 anim-fade-up">
+      <a href="{{ url_for('admin_drivers') }}" class="back-link">
+        <i class="bi bi-arrow-left me-1"></i>Quay lại danh sách tài xế
+      </a>
+    </div>
+
+    <div class="card anim-fade-up anim-d1">
+      <div class="card-header">
+        <div class="card-header-title">
+          <i class="bi bi-pencil-fill text-indigo"></i> Chỉnh sửa — {{ driver.TenTaiXe }}
+        </div>
+        <!-- Driver ID badge -->
+        <span style="font-size:.72rem;color:#94a3b8;">ID: {{ driver.MaTaiXe }}</span>
+      </div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('admin_edit_driver', driver_id=driver.MaTaiXe) }}" novalidate>
+
+          <div class="mb-3">
+            <label class="form-label">Họ và tên <span class="text-danger">*</span></label>
+            <div class="input-icon-wrap">
+              <i class="bi bi-person"></i>
+              <input type="text" name="ten_tai_xe" class="form-control"
+                     value="{{ driver.TenTaiXe }}" required maxlength="100" autofocus>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Số điện thoại <span class="text-danger">*</span></label>
+            <div class="input-icon-wrap">
+              <i class="bi bi-telephone"></i>
+              <input type="text" name="dien_thoai" class="form-control"
+                     value="{{ driver.DienThoai }}" required maxlength="15">
+            </div>
+            <div class="form-text">Dùng để đăng nhập trên thiết bị tài xế.</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Khu vực phụ trách</label>
+            <div class="input-icon-wrap">
+              <i class="bi bi-geo-alt"></i>
+              <input type="text" name="khu_vuc" class="form-control"
+                     value="{{ driver.KhuVuc or '' }}" maxlength="100"
+                     placeholder="Quận 1, Quận 3…">
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label">Mật khẩu mới</label>
+            <div class="input-icon-wrap">
+              <i class="bi bi-lock"></i>
+              <input type="password" name="mat_khau" class="form-control"
+                     placeholder="Để trống nếu không muốn thay đổi" minlength="6">
+            </div>
+            <div class="form-text">Chỉ điền nếu muốn đổi mật khẩu (tối thiểu 6 ký tự).</div>
+          </div>
+
+          <!-- COD info (read-only) -->
+          <div class="p-3 rounded-3 mb-4 d-flex align-items-center justify-content-between"
+               style="background:#f8fafc;border:1px solid #e2e8f0;">
+            <div style="font-size:.8rem;color:#475569;">
+              <i class="bi bi-wallet2 me-2 text-indigo"></i>
+              COD đang giữ:
+            </div>
+            <div class="fw-bold" style="color:{% if driver.SoDuVi > 0 %}#dc2626{% else %}#16a34a{% endif %};">
+              {{ driver.SoDuVi|vnd }}
+            </div>
+          </div>
+
+          <div class="d-flex gap-2 justify-content-end">
+            <a href="{{ url_for('admin_drivers') }}" class="btn btn-outline-secondary">
+              <i class="bi bi-x-lg me-1"></i>Huỷ
+            </a>
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-check-lg me-1"></i>Lưu thay đổi
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+
+    <!-- Danger zone: delete -->
+    <div class="card mt-3 anim-fade-up anim-d2" style="border-color:#fecaca;">
+      <div class="card-body p-3">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div style="font-size:.85rem;font-weight:700;color:#dc2626;">
+              <i class="bi bi-exclamation-triangle-fill me-1"></i>Vùng nguy hiểm
+            </div>
+            <div style="font-size:.75rem;color:#64748b;margin-top:.2rem;">
+              Xóa tài xế khỏi hệ thống. Không thể hoàn tác.
+            </div>
+          </div>
+          <button class="btn btn-sm btn-outline-danger btn-delete-driver flex-shrink-0"
+                  data-id="{{ driver.MaTaiXe }}" data-name="{{ driver.TenTaiXe }}">
+            <i class="bi bi-trash3-fill me-1"></i>Xóa tài xế
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

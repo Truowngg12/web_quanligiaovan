@@ -1,0 +1,156 @@
+{% extends "admin/base.html" %}
+{% block title %}Tài xế{% endblock %}
+{% block breadcrumb %}Quản lý tài xế{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('admin_create_driver') }}" class="btn btn-primary btn-sm">
+  <i class="bi bi-person-plus-fill me-1"></i>Thêm tài xế
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="sec-hdr mb-3 anim-fade-up">
+  <div>
+    <h2 class="sec-title mb-0">Quản lý tài xế</h2>
+    <p class="text-muted mb-0" style="font-size:.79rem;">{{ driver_list|length }} tài xế trong hệ thống</p>
+  </div>
+</div>
+
+<!-- Summary cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3 anim-fade-up anim-d1">
+    <div class="card stat-card">
+      <div class="card-body">
+        <div class="stat-icon icon-indigo"><i class="bi bi-people"></i></div>
+        <div>
+          <div class="stat-value">{{ driver_list|length }}</div>
+          <div class="stat-label">Tổng tài xế</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3 anim-fade-up anim-d2">
+    <div class="card stat-card">
+      <div class="card-body">
+        <div class="stat-icon icon-amber"><i class="bi bi-truck"></i></div>
+        <div>
+          <div class="stat-value">{{ driver_list|sum(attribute='active_count') }}</div>
+          <div class="stat-label">Đơn đang giao</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3 anim-fade-up anim-d3">
+    <div class="card stat-card">
+      <div class="card-body">
+        <div class="stat-icon icon-green"><i class="bi bi-check2-all"></i></div>
+        <div>
+          <div class="stat-value">{{ driver_list|sum(attribute='done_count') }}</div>
+          <div class="stat-label">Đã hoàn thành</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3 anim-fade-up anim-d4">
+    <div class="card stat-card">
+      <div class="card-body">
+        <div class="stat-icon icon-red"><i class="bi bi-wallet2"></i></div>
+        <div>
+          <div class="stat-value" style="font-size:1.1rem;">{{ total_cod|vnd }}</div>
+          <div class="stat-label">Tổng COD đang giữ</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if driver_list %}
+<div class="table-wrap anim-fade-up">
+  <table class="table align-middle" id="driverTable">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Tài xế</th>
+        <th>Khu vực</th>
+        <th class="text-center">Đang giao</th>
+        <th class="text-center">Hoàn thành</th>
+        <th class="text-end">COD đang giữ</th>
+        <th class="text-center">Ví</th>
+        <th class="text-center" style="width:110px;">Thao tác</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for item in driver_list %}
+    {% set d = item.obj %}
+    <tr id="driver-row-{{ d.MaTaiXe }}">
+      <td style="color:#94a3b8;font-size:.78rem;">{{ d.MaTaiXe }}</td>
+      <td>
+        <div class="d-flex align-items-center gap-2">
+          <div class="user-avatar" style="width:36px;height:36px;background:var(--primary);font-size:.82rem;flex-shrink:0;">
+            <i class="bi bi-person-fill"></i>
+          </div>
+          <div>
+            <div class="fw-semibold" style="color:#0f172a;font-size:.9rem;">{{ d.TenTaiXe }}</div>
+            <div style="font-size:.74rem;color:#64748b;">
+              <i class="bi bi-telephone me-1" style="font-size:.65rem;"></i>{{ d.DienThoai }}
+            </div>
+          </div>
+        </div>
+      </td>
+      <td><span style="font-size:.83rem;color:#475569;">{{ d.KhuVuc or '—' }}</span></td>
+      <td class="text-center">
+        {% if item.active_count > 0 %}
+        <span class="sbadge sb-delivering"><span class="sbadge-dot"></span>{{ item.active_count }}</span>
+        {% else %}<span class="text-muted" style="font-size:.8rem;">—</span>{% endif %}
+      </td>
+      <td class="text-center">
+        <span style="font-size:.88rem;font-weight:700;color:#16a34a;">{{ item.done_count }}</span>
+      </td>
+      <td class="text-end">
+        {% if d.SoDuVi > 0 %}
+        <span class="fw-bold" style="color:#dc2626;font-size:.9rem;">{{ d.SoDuVi|vnd }}</span>
+        {% else %}<span class="text-muted" style="font-size:.8rem;">0 ₫</span>{% endif %}
+      </td>
+      <td class="text-center">
+        {% if item.has_pending_cod %}
+        <span class="sbadge sb-failed" style="font-size:.67rem;"><span class="sbadge-dot"></span>Chờ ĐS</span>
+        {% else %}
+        <span class="sbadge sb-success" style="font-size:.67rem;"><span class="sbadge-dot"></span>OK</span>
+        {% endif %}
+      </td>
+      <td class="text-center">
+        <div class="d-flex gap-1 justify-content-center">
+          <!-- Edit -->
+          <a href="{{ url_for('admin_edit_driver', driver_id=d.MaTaiXe) }}"
+             class="btn btn-sm btn-outline-primary" title="Chỉnh sửa"
+             style="padding:.28rem .52rem;border-radius:7px;">
+            <i class="bi bi-pencil-fill" style="font-size:.75rem;"></i>
+          </a>
+          <!-- Delete -->
+          <button class="btn btn-sm btn-outline-danger btn-delete-driver"
+                  data-id="{{ d.MaTaiXe }}" data-name="{{ d.TenTaiXe }}"
+                  title="Xóa tài xế" style="padding:.28rem .52rem;border-radius:7px;">
+            <i class="bi bi-trash3-fill" style="font-size:.75rem;"></i>
+          </button>
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% else %}
+<div class="card anim-fade-up">
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="bi bi-people"></i>
+      <p>Chưa có tài xế nào.</p>
+      <a href="{{ url_for('admin_create_driver') }}" class="btn btn-primary btn-sm mt-2">
+        <i class="bi bi-person-plus-fill me-1"></i>Thêm tài xế đầu tiên
+      </a>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

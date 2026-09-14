@@ -1,0 +1,140 @@
+{% extends "driver/base.html" %}
+{% block title %}Tác vụ{% endblock %}
+
+{% block nav_left %}
+<div style="display:flex;align-items:center;gap:.55rem;">
+  <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.15);
+              display:flex;align-items:center;justify-content:center;font-size:.9rem;">
+    <i class="bi bi-person-fill" style="color:#c7d2fe;"></i>
+  </div>
+  <div>
+    <div style="color:#fff;font-weight:700;font-size:.88rem;line-height:1.2;">{{ session.user_name }}</div>
+    <div style="color:rgba(199,210,254,.6);font-size:.65rem;">Tài xế giao vận</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- Wallet card -->
+<div class="wallet-card" style="animation:fadeInUp .4s ease both;">
+  <div>
+    <div class="wallet-sub">Ví COD đang giữ</div>
+    <div class="wallet-amt">{{ driver.SoDuVi|vnd }}</div>
+    <div class="wallet-note">Tiền COD khách đã trả — chưa quyết toán với hub</div>
+  </div>
+  <div class="wallet-icon"><i class="bi bi-wallet2"></i></div>
+</div>
+
+<!-- Tabs -->
+<div class="drv-tabs" style="animation:fadeInUp .4s .08s ease both;">
+  <a href="{{ url_for('driver_tasks', tab='active') }}"
+     class="drv-tab {% if tab=='active' %}active{% endif %}">
+    <i class="bi bi-truck"></i>
+    Đang giao
+    {% if active_count > 0 %}
+    <span class="drv-tab-count">{{ active_count }}</span>
+    {% endif %}
+  </a>
+  <a href="{{ url_for('driver_tasks', tab='done') }}"
+     class="drv-tab {% if tab=='done' %}active{% endif %}">
+    <i class="bi bi-check2-circle"></i>
+    Xong
+  </a>
+  <a href="{{ url_for('driver_tasks', tab='all') }}"
+     class="drv-tab {% if tab=='all' %}active{% endif %}">
+    <i class="bi bi-list-ul"></i>
+    Tất cả
+  </a>
+</div>
+
+<!-- Order count header -->
+{% if waybills %}
+<div style="padding:0 1rem .5rem;display:flex;align-items:center;justify-content:space-between;">
+  <span style="font-size:.75rem;color:#94a3b8;font-weight:600;">
+    {{ waybills|length }} vận đơn
+  </span>
+  {% if tab == 'active' %}
+  <span style="font-size:.72rem;color:#d97706;font-weight:600;">
+    <i class="bi bi-exclamation-circle me-1"></i>Cần xử lý
+  </span>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- Order cards -->
+<div style="padding-bottom:.5rem;">
+  {% if waybills %}
+    {% for w in waybills %}
+    {% set parts = w.ThongTinNhan.split(' | ') %}
+    {% set s = w.TrangThai %}
+    <a href="{{ url_for('driver_task_detail', ma_van_don=w.MaVanDon) }}"
+       class="order-card
+         {% if s=='Đang đi giao' %}oc-delivering
+         {% elif s=='Thành công' %}oc-success
+         {% elif s=='Giao thất bại' %}oc-failed
+         {% elif s=='Đã đối soát' %}oc-reconciled{% endif %}"
+       style="animation-delay:{{ loop.index0 * 0.05 }}s;">
+
+      <div class="oc-top">
+        <div style="flex:1;min-width:0;">
+          <div class="oc-id">{{ w.MaVanDon }}</div>
+          <div class="oc-name">{{ parts[0] if parts|length>0 else '—' }}</div>
+          {% if parts|length>1 %}
+          <div style="font-size:.78rem;color:#64748b;margin-top:.1rem;">
+            <i class="bi bi-telephone" style="font-size:.68rem;"></i> {{ parts[1] }}
+          </div>
+          {% endif %}
+        </div>
+        <div class="flex-shrink-0 ms-2">
+          {% if s=='Đang đi giao' %}<span class="sbadge sb-delivering" style="font-size:.67rem;"><span class="sbadge-dot"></span>Đang giao</span>
+          {% elif s=='Thành công'  %}<span class="sbadge sb-success"    style="font-size:.67rem;"><span class="sbadge-dot"></span>Thành công</span>
+          {% elif s=='Giao thất bại'%}<span class="sbadge sb-failed"   style="font-size:.67rem;"><span class="sbadge-dot"></span>Thất bại</span>
+          {% elif s=='Đã đối soát' %}<span class="sbadge sb-reconciled" style="font-size:.67rem;"><span class="sbadge-dot"></span>Đối soát</span>
+          {% else                  %}<span class="sbadge sb-pending"    style="font-size:.67rem;"><span class="sbadge-dot"></span>Chờ ĐP</span>{% endif %}
+        </div>
+      </div>
+
+      {% if parts|length>2 %}
+      <div class="oc-addr" style="margin-top:.3rem;">
+        <i class="bi bi-geo-alt" style="font-size:.71rem;color:#94a3b8;margin-right:.2rem;"></i>{{ parts[2] }}
+      </div>
+      {% endif %}
+
+      <div class="oc-bottom">
+        {% if w.TienCOD > 0 %}
+        <span class="cod-chip"><i class="bi bi-cash" style="font-size:.75rem;"></i> {{ w.TienCOD|vnd }}</span>
+        {% else %}
+        <span class="cod-chip zero"><i class="bi bi-check" style="font-size:.75rem;"></i> Không thu COD</span>
+        {% endif %}
+        <span style="color:#94a3b8;font-size:.72rem;">{{ w.NgayTao|dt }}</span>
+        <span class="oc-arrow"><i class="bi bi-chevron-right"></i></span>
+      </div>
+    </a>
+    {% endfor %}
+
+  {% else %}
+  <!-- Empty state -->
+  <div style="text-align:center;padding:3.5rem 1.5rem;color:#94a3b8;animation:fadeInUp .4s ease both;">
+    {% if tab=='active' %}
+    <div style="width:72px;height:72px;border-radius:50%;background:#eef2ff;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+      <i class="bi bi-truck" style="font-size:1.8rem;color:#c7d2fe;"></i>
+    </div>
+    <div style="font-size:.95rem;font-weight:700;color:#64748b;">Không có đơn đang giao</div>
+    <div style="font-size:.78rem;margin:.4rem 0 0;color:#cbd5e1;">Admin sẽ điều phối đơn hàng cho bạn</div>
+    {% elif tab=='done' %}
+    <div style="width:72px;height:72px;border-radius:50%;background:#f0fdf4;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+      <i class="bi bi-check2-circle" style="font-size:1.8rem;color:#bbf7d0;"></i>
+    </div>
+    <div style="font-size:.95rem;font-weight:700;color:#64748b;">Chưa có đơn nào xử lý</div>
+    {% else %}
+    <div style="width:72px;height:72px;border-radius:50%;background:#f8fafc;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+      <i class="bi bi-inbox" style="font-size:1.8rem;color:#cbd5e1;"></i>
+    </div>
+    <div style="font-size:.95rem;font-weight:700;color:#64748b;">Chưa có vận đơn nào</div>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
