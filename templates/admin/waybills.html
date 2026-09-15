@@ -3,6 +3,9 @@
 {% block breadcrumb %}Danh sách vận đơn{% endblock %}
 
 {% block topbar_actions %}
+<a href="{{ url_for('admin_export_excel') }}" class="btn btn-success btn-sm">
+  <i class="bi bi-file-earmark-excel-fill me-1"></i>Xuất Excel
+</a>
 <a href="{{ url_for('admin_create_waybill') }}" class="btn btn-primary btn-sm">
   <i class="bi bi-plus-lg me-1"></i>Tạo vận đơn
 </a>

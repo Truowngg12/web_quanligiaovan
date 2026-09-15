@@ -5,14 +5,24 @@ Last-Mile Waybill Management and Financial Reconciliation System
 """
 import os
 import random
+import re
 import string
 from datetime import datetime, date, timedelta
 from decimal import Decimal
 from functools import wraps
 
 import bcrypt
+import io
+import smtplib
+import threading
+import openpyxl
+from openpyxl.styles import (Font, PatternFill, Alignment, Border, Side)
+from openpyxl.utils import get_column_letter
+from email.mime.text      import MIMEText
+from email.mime.multipart import MIMEMultipart
+
 from flask import (Flask, flash, jsonify, redirect, render_template,
-                   request, send_from_directory, session, url_for)
+                   request, send_file, send_from_directory, session, url_for)
 from sqlalchemy import func
 from werkzeug.utils import secure_filename
 
@@ -26,6 +36,18 @@ app.secret_key = "vandon-secret-key-change-in-production-2024"
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///vandon.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+
+# ── Email Notification config (Task: Auto Email) ────────────────────────────
+# Cách lấy App Password Gmail:
+#   Google Account → Security → 2-Step Verification → App Passwords
+#   Tạo mật khẩu cho "Mail" → paste 16 ký tự vào MAIL_PASSWORD
+# Đặt MAIL_ENABLED=true trong môi trường khi muốn gửi mail thật
+app.config["MAIL_SERVER"]   = os.environ.get("MAIL_SERVER",   "smtp.gmail.com")
+app.config["MAIL_PORT"]     = int(os.environ.get("MAIL_PORT", "587"))
+app.config["MAIL_USERNAME"] = os.environ.get("MAIL_USERNAME", "your_gmail@gmail.com")
+app.config["MAIL_PASSWORD"] = os.environ.get("MAIL_PASSWORD", "xxxx xxxx xxxx xxxx")
+app.config["MAIL_FROM"]     = os.environ.get("MAIL_FROM",     "VanDon Express <your_gmail@gmail.com>")
+app.config["MAIL_ENABLED"]  = os.environ.get("MAIL_ENABLED",  "false").lower() == "true"
 
 # ── Task 1: File-upload configuration ──────────────────────────────────────────
 _UPLOAD_BASE = os.path.join(os.path.dirname(__file__), "static", "uploads", "proofs")
@@ -164,6 +186,95 @@ def get_setting(key: str, default: str = "") -> str:
     """Fetch a single setting value by key; return default if not found."""
     row = CauHinhHeThong.query.filter_by(key=key).first()
     return row.value if row else default
+
+
+# ── Email Notification helper ──────────────────────────────────────────────────
+def send_status_email(customer_email: str, tracking_id: str,
+                      new_status: str, recipient_name: str = "") -> None:
+    """
+    Gửi email thông báo thay đổi trạng thái vận đơn.
+    Chạy trong daemon thread — KHÔNG block HTTP response.
+    Nếu MAIL_ENABLED=false → bỏ qua hoàn toàn (safe cho dev).
+    """
+    if not app.config.get("MAIL_ENABLED"):
+        app.logger.debug(f"[EMAIL] Skipped (MAIL_ENABLED=false) → {customer_email}")
+        return
+
+    def _worker():
+        try:
+            subject  = f"[VanDon] Vận đơn {tracking_id} — {new_status}"
+            track_url = f"http://localhost:5000/track?id={tracking_id}"
+            html_body = f"""<!DOCTYPE html>
+<html lang="vi">
+<head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:'Segoe UI',Arial,sans-serif;">
+  <div style="max-width:560px;margin:32px auto;border-radius:16px;overflow:hidden;
+              box-shadow:0 4px 24px rgba(0,0,0,.10);">
+    <div style="background:linear-gradient(135deg,#1e1b4b,#4338ca);padding:28px 32px;text-align:center;">
+      <div style="font-size:28px;margin-bottom:6px;">📦</div>
+      <h1 style="color:#fff;margin:0;font-size:20px;font-weight:800;">Thông báo vận đơn</h1>
+      <p style="color:rgba(199,210,254,.75);margin:6px 0 0;font-size:13px;">
+        VanDon Express — Hệ thống Quản lý Giao vận chặng cuối</p>
+    </div>
+    <div style="background:#fff;padding:28px 32px;">
+      <p style="color:#334155;font-size:15px;margin-top:0;">
+        Xin chào <strong>{recipient_name or "Quý khách"}</strong>,</p>
+      <p style="color:#475569;font-size:14px;line-height:1.7;">
+        Đơn hàng của bạn vừa được cập nhật trạng thái mới:</p>
+      <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;
+                  padding:20px;margin:20px 0;text-align:center;">
+        <div style="font-size:11px;color:#64748b;text-transform:uppercase;
+                    letter-spacing:.1em;font-weight:700;margin-bottom:6px;">Mã vận đơn</div>
+        <div style="font-family:'Courier New',monospace;font-size:24px;font-weight:900;
+                    color:#1e1b4b;letter-spacing:.06em;margin-bottom:12px;">{tracking_id}</div>
+        <div style="display:inline-block;background:#16a34a;color:#fff;
+                    padding:7px 22px;border-radius:20px;font-weight:700;font-size:14px;">
+          ✓ {new_status}</div>
+      </div>
+      <p style="color:#64748b;font-size:13px;margin-bottom:4px;">
+        Tra cứu tình trạng đơn hàng của bạn:</p>
+      <a href="{track_url}" style="display:inline-block;background:#eef2ff;color:#4f46e5;
+         padding:10px 20px;border-radius:9px;text-decoration:none;
+         font-weight:700;font-size:13px;">
+        🔍 Tra cứu vận đơn {tracking_id}</a>
+      <hr style="border:none;border-top:1px solid #f1f5f9;margin:24px 0;">
+      <p style="color:#94a3b8;font-size:11px;margin:0;line-height:1.6;">
+        Email này được gửi tự động từ hệ thống VanDon Express.<br>
+        Vui lòng không trả lời email này.</p>
+    </div>
+  </div>
+</body>
+</html>"""
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"]    = app.config["MAIL_FROM"]
+            msg["To"]      = customer_email
+            msg.attach(MIMEText(html_body, "html", "utf-8"))
+
+            with smtplib.SMTP(app.config["MAIL_SERVER"],
+                              app.config["MAIL_PORT"]) as srv:
+                srv.ehlo()
+                srv.starttls()
+                srv.login(app.config["MAIL_USERNAME"],
+                          app.config["MAIL_PASSWORD"])
+                srv.sendmail(app.config["MAIL_FROM"],
+                             [customer_email], msg.as_bytes())
+            app.logger.info(
+                f"[EMAIL] ✔ Sent to {customer_email} for {tracking_id}")
+        except Exception as exc:
+            # Lỗi email KHÔNG crash request chính
+            app.logger.error(
+                f"[EMAIL] ✘ Failed → {customer_email} / {tracking_id}: {exc}")
+
+    threading.Thread(target=_worker, daemon=True).start()
+
+
+def get_customer_contact(waybill: VanDon):
+    """Return recipient name and optional email stored in the waybill contact."""
+    parts = waybill.ThongTinNhan.split(" | ")
+    name = parts[0].strip() if parts else ""
+    email = parts[3].strip() if len(parts) > 3 else ""
+    return name, email if re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email) else None
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -363,15 +474,19 @@ def admin_create_waybill():
         ten_nhan    = request.form.get("ten_nhan",    "").strip()
         sdt_nhan    = request.form.get("sdt_nhan",    "").strip()
         dia_chi     = request.form.get("dia_chi",     "").strip()
+        email_nhan  = request.form.get("email_nhan",  "").strip()
         raw_cod     = request.form.get("tien_cod",    "0").strip() or "0"
 
         if not all([ten_nhan, sdt_nhan, dia_chi]):
             flash("Vui lòng điền đầy đủ thông tin người nhận!", "danger")
             return render_template("admin/waybill_create.html", drivers=drivers)
+        if email_nhan and not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email_nhan):
+            flash("Email người nhận không hợp lệ!", "danger")
+            return render_template("admin/waybill_create.html", drivers=drivers)
 
         tien_cod     = Decimal(raw_cod)
         cuoc_phi     = calculate_shipping_fee(tien_cod)
-        thong_tin    = f"{ten_nhan} | {sdt_nhan} | {dia_chi}"
+        thong_tin    = " | ".join(filter(None, [ten_nhan, sdt_nhan, dia_chi, email_nhan]))
         ma_van_don   = generate_waybill_id()
 
         try:
@@ -884,6 +999,19 @@ def driver_update_status(ma_van_don):
             cod_fmt = vnd_format(van_don.TienCOD)
             flash(f"✔ Giao hàng thành công! Ví COD đã được cộng {cod_fmt}.", "success")
 
+            # ── Email Notification (non-blocking, ADD-ON) ─────────────────
+            # ThongTinNhan format: "Tên | SĐT | Địa chỉ | Email" (4 trường)
+            # Nếu chỉ có 3 trường (format cũ) → bỏ qua, không crash
+            _cust_name, _cust_email = get_customer_contact(van_don)
+            if _cust_email and "@" in _cust_email:
+                send_status_email(
+                    customer_email=_cust_email,
+                    tracking_id=ma_van_don,
+                    new_status=VanDon.STATUS_SUCCESS,
+                    recipient_name=_cust_name,
+                )
+            # ── END Email Notification ────────────────────────────────────
+
         elif action == "fail":
             if not ly_do:
                 flash("Bạn phải nhập lý do khi báo giao thất bại!", "danger")
@@ -898,6 +1026,15 @@ def driver_update_status(ma_van_don):
             ))
             db.session.commit()
             flash("Đã cập nhật trạng thái giao thất bại.", "info")
+
+            _cust_name, _cust_email = get_customer_contact(van_don)
+            if _cust_email:
+                send_status_email(
+                    customer_email=_cust_email,
+                    tracking_id=ma_van_don,
+                    new_status=VanDon.STATUS_FAILED,
+                    recipient_name=_cust_name,
+                )
 
         else:
             flash("Hành động không hợp lệ.", "danger")
@@ -921,6 +1058,182 @@ def serve_proof(filename):
 # ──────────────────────────────────────────────────────────────────────────────
 # ADMIN — System Settings (Task 2)
 # ──────────────────────────────────────────────────────────────────────────────
+
+# ──────────────────────────────────────────────────────────────────────────────
+# ADMIN — Export Excel (ADD-ON)
+# ──────────────────────────────────────────────────────────────────────────────
+@app.route("/admin/export/excel")
+@admin_required
+def admin_export_excel():
+    """
+    Xuất toàn bộ VAN_DON ra Excel 2 sheet: chi tiết + tóm tắt.
+    Dùng openpyxl, stream qua BytesIO — không ghi file lên disk.
+    Không thay đổi bất kỳ logic nghiệp vụ nào.
+    """
+    # ── 1. Query ─────────────────────────────────────────────────
+    rows = (
+        db.session.query(VanDon, TaiXe)
+        .outerjoin(TaiXe, VanDon.MaTaiXe == TaiXe.MaTaiXe)
+        .order_by(VanDon.NgayTao.desc())
+        .all()
+    )
+
+    # ── 2. Workbook + styles ──────────────────────────────────────
+    wb  = openpyxl.Workbook()
+    ws1 = wb.active
+    ws1.title = "Danh sách vận đơn"
+
+    _thin   = Side(style="thin", color="D1D5DB")
+    _border = Border(left=_thin, right=_thin, top=_thin, bottom=_thin)
+
+    _hdr_font  = Font(name="Calibri", bold=True, color="FFFFFF", size=10)
+    _hdr_fill  = PatternFill("solid", fgColor="1E1B4B")
+    _hdr_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    _cell_align = Alignment(horizontal="left",  vertical="center")
+    _num_align  = Alignment(horizontal="right", vertical="center")
+
+    _status_fill = {
+        VanDon.STATUS_PENDING:    PatternFill("solid", fgColor="F8FAFC"),
+        VanDon.STATUS_DELIVERING: PatternFill("solid", fgColor="FFFBEB"),
+        VanDon.STATUS_SUCCESS:    PatternFill("solid", fgColor="F0FDF4"),
+        VanDon.STATUS_FAILED:     PatternFill("solid", fgColor="FEF2F2"),
+        VanDon.STATUS_RECONCILED: PatternFill("solid", fgColor="EEF2FF"),
+    }
+
+    # ── 3. Headers ────────────────────────────────────────────────
+    HEADERS = [
+        ("Mã vận đơn",       18),
+        ("Người nhận",        22),
+        ("Số điện thoại",     15),
+        ("Địa chỉ giao",      38),
+        ("Email",             28),
+        ("Tiền COD (₫)",      16),
+        ("Cước phí (₫)",      14),
+        ("Trạng thái",        18),
+        ("Tài xế",            20),
+        ("Ngày tạo",          18),
+        ("Ảnh minh chứng",    16),
+    ]
+    for col, (title, width) in enumerate(HEADERS, 1):
+        c = ws1.cell(row=1, column=col, value=title)
+        c.font      = _hdr_font
+        c.fill      = _hdr_fill
+        c.alignment = _hdr_align
+        c.border    = _border
+        ws1.column_dimensions[get_column_letter(col)].width = width
+    ws1.row_dimensions[1].height = 28
+
+    # ── 4. Data rows ──────────────────────────────────────────────
+    VND_FMT = '#,##0 [$₫-vi-VN]'
+    for r, (w, tx) in enumerate(rows, 2):
+        parts = w.ThongTinNhan.split(" | ")
+        sf    = _status_fill.get(w.TrangThai)
+
+        vals = [
+            w.MaVanDon,
+            parts[0] if len(parts) > 0 else "",
+            parts[1] if len(parts) > 1 else "",
+            parts[2] if len(parts) > 2 else "",
+            parts[3] if len(parts) > 3 else "",
+            float(w.TienCOD),
+            float(w.CuocPhi),
+            w.TrangThai,
+            tx.TenTaiXe if tx else "—",
+            w.NgayTao.strftime("%d/%m/%Y %H:%M") if w.NgayTao else "",
+            "Có ảnh" if w.HinhAnhMinhChung else "",
+        ]
+        for col, val in enumerate(vals, 1):
+            c = ws1.cell(row=r, column=col, value=val)
+            c.border    = _border
+            c.alignment = _cell_align
+            if sf:
+                c.fill = sf
+        for col in (6, 7):        # format tiền
+            ws1.cell(row=r, column=col).number_format = VND_FMT
+            ws1.cell(row=r, column=col).alignment     = _num_align
+
+    ws1.freeze_panes = "A2"
+    ws1.auto_filter.ref = f"A1:{get_column_letter(len(HEADERS))}1"
+
+    # ── 5. Summary sheet ──────────────────────────────────────────
+    ws2 = wb.create_sheet("Tóm tắt")
+    ws2.column_dimensions["A"].width = 34
+    ws2.column_dimensions["B"].width = 22
+
+    total     = len(rows)
+    ok        = sum(1 for w, _ in rows
+                    if w.TrangThai in [VanDon.STATUS_SUCCESS,
+                                       VanDon.STATUS_RECONCILED])
+    fail      = sum(1 for w, _ in rows if w.TrangThai == VanDon.STATUS_FAILED)
+    going     = sum(1 for w, _ in rows if w.TrangThai == VanDon.STATUS_DELIVERING)
+    wait      = sum(1 for w, _ in rows if w.TrangThai == VanDon.STATUS_PENDING)
+    cod_ok    = sum(float(w.TienCOD) for w, _ in rows
+                    if w.TrangThai in [VanDon.STATUS_SUCCESS,
+                                       VanDon.STATUS_RECONCILED])
+    fee_total = sum(float(w.CuocPhi) for w, _ in rows)
+    pct       = round(ok / total * 100, 1) if total else 0.0
+
+    _s_hdr  = Font(name="Calibri", bold=True, size=13, color="1E1B4B")
+    _s_key  = Font(name="Calibri", bold=True, size=10)
+    _s_sub  = Font(name="Calibri", bold=True, size=10, color="FFFFFF")
+    _s_fill = PatternFill("solid", fgColor="EEF2FF")
+    _sub_fill = PatternFill("solid", fgColor="4338CA")
+
+    summary = [
+        ("📊 BÁO CÁO TỔNG HỢP VẬN ĐƠN",        None,       "title"),
+        (None,                                    None,       None),
+        ("Chỉ số",                               "Giá trị",  "subhdr"),
+        ("Tổng số vận đơn",                       total,      "data"),
+        ("Giao thành công (+ Đã đối soát)",        ok,         "data"),
+        ("Đang giao",                             going,      "data"),
+        ("Giao thất bại",                         fail,       "data"),
+        ("Chờ điều phối",                         wait,       "data"),
+        ("Tỉ lệ thành công (%)",                  pct,        "data"),
+        (None,                                    None,       None),
+        ("Tổng COD đã thu (₫)",                   cod_ok,     "money"),
+        ("Tổng cước phí (₫)",                    fee_total,  "money"),
+        (None,                                    None,       None),
+        ("Xuất lúc",   datetime.now().strftime("%d/%m/%Y %H:%M:%S"), "data"),
+        ("Xuất bởi",   "VanDon System — Admin Dashboard",           "data"),
+    ]
+
+    for sr, row_data in enumerate(summary, 1):
+        label, value, rtype = row_data
+        if not label:
+            continue
+        ca = ws2.cell(row=sr, column=1, value=label)
+        cb = ws2.cell(row=sr, column=2, value=value)
+        if rtype == "title":
+            ca.font = _s_hdr
+        elif rtype == "subhdr":
+            ca.font = cb.font = _s_sub
+            ca.fill = cb.fill = _sub_fill
+        elif rtype == "money":
+            ca.font = _s_key
+            cb.number_format = '#,##0 [$₫-vi-VN]'
+            ca.fill = cb.fill = _s_fill
+        else:
+            ca.font = _s_key
+            if sr % 2 == 0:
+                ca.fill = cb.fill = _s_fill
+
+    # ── 6. Stream response ────────────────────────────────────────
+    buf  = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    today    = datetime.now().strftime("%Y%m%d_%H%M")
+    dl_name  = f"BaoCao_VanDon_{today}.xlsx"
+    return send_file(
+        buf,
+        mimetype=(
+            "application/vnd.openxmlformats-officedocument"
+            ".spreadsheetml.sheet"
+        ),
+        as_attachment=True,
+        download_name=dl_name,
+    )
+
 
 # Default settings seeded on first run
 _DEFAULT_SETTINGS = [

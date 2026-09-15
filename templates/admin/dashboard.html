@@ -15,6 +15,11 @@
     <a href="{{ url_for('track_waybill') }}" class="btn btn-outline-secondary btn-sm" target="_blank">
       <i class="bi bi-search me-1"></i>Tra cứu công khai
     </a>
+    <a href="{{ url_for('admin_export_excel') }}"
+       class="btn btn-success btn-sm"
+       title="Xuất toàn bộ dữ liệu vận đơn ra Excel (.xlsx)">
+      <i class="bi bi-file-earmark-excel-fill me-1"></i>Xuất Excel
+    </a>
     <a href="{{ url_for('admin_create_waybill') }}" class="btn btn-primary btn-sm">
       <i class="bi bi-plus-lg me-1"></i>Tạo vận đơn
     </a>

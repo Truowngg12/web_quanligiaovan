@@ -1,6 +1,7 @@
 # Hệ thống Quản lý Vận đơn và Đối soát Tài chính Chặng cuối
 **Last-Mile Waybill Management & Financial Reconciliation System**
 
+> Đồ án tốt nghiệp — Trường Đại học Nguyễn Tất Thành (NTTU)
 
 ---
 
@@ -138,6 +139,23 @@ ADMIN ──────────────────── VAN_DON ─�
 - Route guards: `@admin_required` / `@driver_required`
 - Guard chống cập nhật trùng lặp trạng thái vận đơn
 - Mọi thao tác tài chính chạy trong **atomic DB transaction**
+- Có thể xuất báo cáo vận đơn dạng **Excel (.xlsx)** từ Dashboard hoặc danh sách vận đơn
+- Nhập email người nhận để tự động gửi thông báo khi giao thành công hoặc thất bại
+
+### Cấu hình gửi email
+
+Mặc định email bị tắt để chạy an toàn ở môi trường phát triển. Để bật gửi email qua SMTP:
+
+```bash
+MAIL_ENABLED=true
+MAIL_SERVER=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=your_gmail@gmail.com
+MAIL_PASSWORD="mật khẩu ứng dụng Gmail"
+MAIL_FROM="VanDon Express <your_gmail@gmail.com>"
+```
+
+Không đưa mật khẩu SMTP vào mã nguồn hoặc commit vào repository.
 
 ---
 
@@ -149,3 +167,4 @@ ADMIN ──────────────────── VAN_DON ─�
 
 ---
 
+*© 2024 — NTTU IT Department — Last-Mile Logistics System*
